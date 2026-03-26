@@ -2,19 +2,23 @@ export default function StatsCard({ title, value, subtitle, icon: Icon, color = 
   const colorMap = {
     primary: {
       iconBg: 'bg-primary-100',
-      iconText: 'text-primary-600',
+      iconText: 'text-primary-700',
     },
-    blue: {
-      iconBg: 'bg-blue-100',
-      iconText: 'text-blue-600',
+    dark: {
+      iconBg: 'bg-neutral-100',
+      iconText: 'text-neutral-700',
     },
     accent: {
-      iconBg: 'bg-amber-100',
-      iconText: 'text-amber-600',
+      iconBg: 'bg-accent-100',
+      iconText: 'text-accent-600',
     },
     green: {
       iconBg: 'bg-emerald-100',
       iconText: 'text-emerald-600',
+    },
+    blue: {
+      iconBg: 'bg-blue-100',
+      iconText: 'text-blue-600',
     },
     purple: {
       iconBg: 'bg-purple-100',
@@ -29,15 +33,15 @@ export default function StatsCard({ title, value, subtitle, icon: Icon, color = 
   const scheme = colorMap[color] || colorMap.primary;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/60 p-5 transition-all duration-200 hover:shadow-md hover:border-slate-200">
+    <div className="bg-white rounded-xl border border-neutral-200/60 p-5 transition-all duration-200 hover:shadow-md hover:border-primary-300/50">
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
             {title}
           </p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{value}</p>
+          <p className="text-2xl font-bold text-neutral-900 mt-1">{value}</p>
           {subtitle && (
-            <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
+            <p className="text-sm text-neutral-500 mt-1">{subtitle}</p>
           )}
         </div>
         {Icon && (

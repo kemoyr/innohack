@@ -3,25 +3,25 @@ import { Star } from 'lucide-react';
 
 const podiumStyles = [
   {
-    bg: 'bg-gradient-to-r from-amber-50 to-yellow-50',
-    border: 'border-amber-200',
-    text: 'text-amber-800',
-    badge: 'bg-amber-100 text-amber-700',
-    rankBg: 'bg-amber-400 text-white',
+    bg: 'bg-gradient-to-r from-primary-50 to-primary-100',
+    border: 'border-primary-300',
+    text: 'text-neutral-900',
+    badge: 'bg-primary-100 text-primary-800',
+    rankBg: 'bg-primary-500 text-black',
   },
   {
-    bg: 'bg-gradient-to-r from-slate-50 to-gray-50',
-    border: 'border-slate-200',
-    text: 'text-slate-700',
-    badge: 'bg-slate-100 text-slate-600',
-    rankBg: 'bg-slate-400 text-white',
+    bg: 'bg-gradient-to-r from-neutral-50 to-neutral-100',
+    border: 'border-neutral-200',
+    text: 'text-neutral-700',
+    badge: 'bg-neutral-100 text-neutral-600',
+    rankBg: 'bg-neutral-400 text-white',
   },
   {
-    bg: 'bg-gradient-to-r from-orange-50 to-amber-50',
-    border: 'border-orange-200',
+    bg: 'bg-gradient-to-r from-accent-50 to-orange-50',
+    border: 'border-accent-400/30',
     text: 'text-orange-800',
     badge: 'bg-orange-100 text-orange-700',
-    rankBg: 'bg-orange-400 text-white',
+    rankBg: 'bg-accent-500 text-white',
   },
 ];
 
@@ -30,7 +30,7 @@ export default function Leaderboard({ data, compact = false }) {
 
   if (!data || data.length === 0) {
     return (
-      <div className="text-center text-slate-400 py-8">
+      <div className="text-center text-neutral-400 py-8">
         Нет данных для отображения
       </div>
     );
@@ -59,11 +59,11 @@ export default function Leaderboard({ data, compact = false }) {
                 {person.full_name}
               </p>
               {!compact && (
-                <p className="text-xs text-slate-500">{person.city}</p>
+                <p className="text-xs text-neutral-500">{person.city}</p>
               )}
             </div>
             <div className="flex items-center gap-1.5">
-              <Star size={13} className="text-accent-500" />
+              <Star size={13} className="text-primary-500" />
               <span className={`text-sm font-bold ${style.badge} px-2 py-0.5 rounded-lg`}>
                 {person.points}
               </span>
@@ -80,28 +80,28 @@ export default function Leaderboard({ data, compact = false }) {
           <div
             key={person.id}
             onClick={() => navigate(`/team/${person.id}`)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 hover:bg-slate-50"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 hover:bg-neutral-50"
           >
-            <span className="w-7 text-center text-sm font-semibold text-slate-400">
+            <span className="w-7 text-center text-sm font-semibold text-neutral-400">
               {rank}
             </span>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-slate-700 text-sm truncate">
+              <p className="font-medium text-neutral-700 text-sm truncate">
                 {person.full_name}
               </p>
               <div className="flex items-center gap-2 mt-1">
-                <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="flex-1 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-primary-400/40 rounded-full transition-all duration-500"
                     style={{ width: `${barWidth}%` }}
                   />
                 </div>
-                <span className="text-xs text-slate-400 whitespace-nowrap">
+                <span className="text-xs text-neutral-400 whitespace-nowrap">
                   {person.city}
                 </span>
               </div>
             </div>
-            <span className="font-semibold text-sm text-slate-600">
+            <span className="font-semibold text-sm text-neutral-600">
               {person.points}
             </span>
           </div>

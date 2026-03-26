@@ -13,16 +13,16 @@ function formatDate(dateStr) {
 }
 
 const badgeColors = {
-  gold: 'from-amber-400 to-yellow-500',
-  silver: 'from-slate-400 to-slate-500',
-  bronze: 'from-orange-400 to-amber-500',
-  default: 'from-primary-500 to-primary-700',
+  gold: 'from-primary-400 to-primary-600',
+  silver: 'from-neutral-400 to-neutral-500',
+  bronze: 'from-accent-400 to-accent-600',
+  default: 'from-neutral-700 to-neutral-900',
 };
 
 const submissionStatusConfig = {
   verified: { label: 'Принят', icon: CheckCircle2, className: 'bg-emerald-50 text-emerald-700' },
   rejected: { label: 'Отклонён', icon: XCircle, className: 'bg-red-50 text-red-700' },
-  pending: { label: 'На проверке', icon: Clock, className: 'bg-amber-50 text-amber-700' },
+  pending: { label: 'На проверке', icon: Clock, className: 'bg-primary-100 text-primary-800' },
 };
 
 export default function VolunteerDetail() {
@@ -49,7 +49,7 @@ export default function VolunteerDetail() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="flex items-center gap-3 text-slate-400">
+        <div className="flex items-center gap-3 text-neutral-400">
           <Loader2 className="h-6 w-6 animate-spin text-primary-500" />
           <span className="text-sm font-medium">Загрузка...</span>
         </div>
@@ -60,11 +60,11 @@ export default function VolunteerDetail() {
   if (error || !volunteer) {
     return (
       <div className="text-center py-16">
-        <AlertCircle size={32} className="mx-auto mb-3 text-slate-300" />
-        <p className="text-slate-500 text-sm">{error || 'Волонтёр не найден'}</p>
+        <AlertCircle size={32} className="mx-auto mb-3 text-neutral-300" />
+        <p className="text-neutral-500 text-sm">{error || 'Волонтёр не найден'}</p>
         <button
           onClick={() => navigate('/team')}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors text-sm font-medium"
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-black rounded-xl hover:bg-primary-400 transition-colors text-sm font-bold"
         >
           <ArrowLeft size={16} />
           Назад к команде
@@ -81,28 +81,28 @@ export default function VolunteerDetail() {
       {/* Back button */}
       <button
         onClick={() => navigate('/team')}
-        className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary-600 transition-colors font-medium"
+        className="flex items-center gap-2 text-sm text-neutral-500 hover:text-primary-700 transition-colors font-medium"
       >
         <ArrowLeft size={16} />
         <span>Назад к команде</span>
       </button>
 
       {/* Profile Header */}
-      <div className="bg-white rounded-xl border border-slate-200/60 p-6">
+      <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
         <div className="flex items-start gap-5">
-          <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center text-primary-600 text-xl font-bold shrink-0">
+          <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center text-primary-800 text-xl font-bold shrink-0">
             {volunteer.full_name?.charAt(0)?.toUpperCase() || '?'}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-xl font-bold text-slate-900">
+              <h1 className="text-xl font-bold text-neutral-900">
                 {volunteer.full_name}
               </h1>
               <span
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
                   volunteer.status === 'active'
                     ? 'bg-emerald-50 text-emerald-700'
-                    : 'bg-slate-100 text-slate-500'
+                    : 'bg-neutral-100 text-neutral-500'
                 }`}
               >
                 {volunteer.status === 'active' ? (
@@ -113,22 +113,22 @@ export default function VolunteerDetail() {
                 {volunteer.status === 'active' ? 'Активен' : 'Неактивен'}
               </span>
             </div>
-            <div className="flex flex-wrap gap-4 mt-3 text-sm text-slate-500">
+            <div className="flex flex-wrap gap-4 mt-3 text-sm text-neutral-500">
               {volunteer.city && (
                 <div className="flex items-center gap-1.5">
-                  <MapPin size={14} className="text-slate-400" />
+                  <MapPin size={14} className="text-neutral-400" />
                   <span>{volunteer.city}</span>
                 </div>
               )}
               {volunteer.telegram_id && (
                 <div className="flex items-center gap-1.5">
-                  <MessageCircle size={14} className="text-slate-400" />
+                  <MessageCircle size={14} className="text-neutral-400" />
                   <span>Telegram: {volunteer.telegram_id}</span>
                 </div>
               )}
               {volunteer.created_at && (
                 <div className="flex items-center gap-1.5">
-                  <Calendar size={14} className="text-slate-400" />
+                  <Calendar size={14} className="text-neutral-400" />
                   <span>С {formatDate(volunteer.created_at)}</span>
                 </div>
               )}
@@ -137,47 +137,47 @@ export default function VolunteerDetail() {
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-100">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-neutral-100">
           <div className="text-center">
             <div className="flex items-center justify-center gap-1.5 mb-1">
-              <Star size={16} className="text-accent-500" />
+              <Star size={16} className="text-primary-500" />
             </div>
-            <p className="text-2xl font-bold text-slate-900">{volunteer.points || 0}</p>
-            <p className="text-xs text-slate-500 mt-0.5">Баллов</p>
+            <p className="text-2xl font-bold text-neutral-900">{volunteer.points || 0}</p>
+            <p className="text-xs text-neutral-500 mt-0.5">Баллов</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-1.5 mb-1">
-              <FileText size={16} className="text-primary-500" />
+              <FileText size={16} className="text-neutral-500" />
             </div>
-            <p className="text-2xl font-bold text-slate-900">{submissions.length}</p>
-            <p className="text-xs text-slate-500 mt-0.5">Отчётов</p>
+            <p className="text-2xl font-bold text-neutral-900">{submissions.length}</p>
+            <p className="text-xs text-neutral-500 mt-0.5">Отчётов</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-1.5 mb-1">
-              <Award size={16} className="text-emerald-500" />
+              <Award size={16} className="text-accent-500" />
             </div>
-            <p className="text-2xl font-bold text-slate-900">{achievements.length}</p>
-            <p className="text-xs text-slate-500 mt-0.5">Достижений</p>
+            <p className="text-2xl font-bold text-neutral-900">{achievements.length}</p>
+            <p className="text-xs text-neutral-500 mt-0.5">Достижений</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-1.5 mb-1">
-              <Medal size={16} className="text-blue-500" />
+              <Medal size={16} className="text-primary-700" />
             </div>
-            <p className="text-2xl font-bold text-slate-900">
+            <p className="text-2xl font-bold text-neutral-900">
               {volunteer.rank || '---'}
             </p>
-            <p className="text-xs text-slate-500 mt-0.5">Место в рейтинге</p>
+            <p className="text-xs text-neutral-500 mt-0.5">Место в рейтинге</p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Submissions */}
-        <div className="bg-white rounded-xl border border-slate-200/60 p-6">
+        <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
           <div className="flex items-center gap-2 mb-4">
-            <FileText size={16} className="text-slate-400" />
-            <h2 className="text-sm font-semibold text-slate-900">Отчёты</h2>
-            <span className="text-xs text-slate-400 ml-auto">{submissions.length}</span>
+            <FileText size={16} className="text-neutral-400" />
+            <h2 className="text-sm font-semibold text-neutral-900">Отчёты</h2>
+            <span className="text-xs text-neutral-400 ml-auto">{submissions.length}</span>
           </div>
           {submissions.length > 0 ? (
             <div className="space-y-2">
@@ -187,15 +187,15 @@ export default function VolunteerDetail() {
                 return (
                   <div
                     key={sub.id || idx}
-                    className="flex items-center justify-between p-3 rounded-lg bg-slate-50/50 border border-slate-100"
+                    className="flex items-center justify-between p-3 rounded-lg bg-neutral-50/50 border border-neutral-100"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <FileText size={14} className="text-slate-400 shrink-0" />
+                      <FileText size={14} className="text-neutral-400 shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-700 truncate">
+                        <p className="text-sm font-medium text-neutral-700 truncate">
                           {sub.event_title || sub.title || `Отчёт #${idx + 1}`}
                         </p>
-                        <p className="text-xs text-slate-400 mt-0.5">
+                        <p className="text-xs text-neutral-400 mt-0.5">
                           {formatDate(sub.created_at || sub.date)}
                         </p>
                       </div>
@@ -211,19 +211,19 @@ export default function VolunteerDetail() {
               })}
             </div>
           ) : (
-            <div className="text-center py-10 text-slate-400">
-              <FileText size={24} className="mx-auto mb-2 text-slate-300" />
+            <div className="text-center py-10 text-neutral-400">
+              <FileText size={24} className="mx-auto mb-2 text-neutral-300" />
               <p className="text-sm">Отчётов пока нет</p>
             </div>
           )}
         </div>
 
         {/* Achievements */}
-        <div className="bg-white rounded-xl border border-slate-200/60 p-6">
+        <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Award size={16} className="text-slate-400" />
-            <h2 className="text-sm font-semibold text-slate-900">Достижения</h2>
-            <span className="text-xs text-slate-400 ml-auto">{achievements.length}</span>
+            <Award size={16} className="text-neutral-400" />
+            <h2 className="text-sm font-semibold text-neutral-900">Достижения</h2>
+            <span className="text-xs text-neutral-400 ml-auto">{achievements.length}</span>
           </div>
           {achievements.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">
@@ -246,8 +246,8 @@ export default function VolunteerDetail() {
               })}
             </div>
           ) : (
-            <div className="text-center py-10 text-slate-400">
-              <Award size={24} className="mx-auto mb-2 text-slate-300" />
+            <div className="text-center py-10 text-neutral-400">
+              <Award size={24} className="mx-auto mb-2 text-neutral-300" />
               <p className="text-sm">Достижений пока нет</p>
             </div>
           )}

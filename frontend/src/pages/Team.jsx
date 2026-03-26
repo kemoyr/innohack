@@ -34,7 +34,7 @@ export default function Team() {
         prev.map((v) => (v.id === volunteerId ? { ...v, status: updated.status || (v.status === 'active' ? 'inactive' : 'active') } : v))
       );
     } catch {
-      // Silently fail or could add error handling
+      // Silently fail
     } finally {
       setTogglingId(null);
     }
@@ -63,7 +63,7 @@ export default function Team() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="flex items-center gap-3 text-slate-400">
+        <div className="flex items-center gap-3 text-neutral-400">
           <Loader2 className="h-6 w-6 animate-spin text-primary-500" />
           <span className="text-sm font-medium">Загрузка...</span>
         </div>
@@ -75,8 +75,8 @@ export default function Team() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-slate-900">Команда</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+        <h1 className="text-xl font-bold text-neutral-900">Команда</h1>
+        <p className="text-sm text-neutral-500 mt-0.5">
           Реестр волонтёров ({volunteers.length} всего)
         </p>
       </div>
@@ -86,14 +86,14 @@ export default function Team() {
         {/* Search */}
         <div className="relative flex-1">
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2">
-            <Search size={16} className="text-slate-400" />
+            <Search size={16} className="text-neutral-400" />
           </div>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Поиск по имени или городу..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all duration-200"
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-neutral-200 rounded-xl text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all duration-200"
           />
         </div>
 
@@ -107,8 +107,8 @@ export default function Team() {
                 onClick={() => setFilter(btn.key)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                   filter === btn.key
-                    ? 'bg-primary-600 text-white shadow-md shadow-primary-600/25'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                    ? 'bg-primary-500 text-black shadow-md shadow-primary-500/25'
+                    : 'bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50'
                 }`}
               >
                 <Icon size={15} />
@@ -120,7 +120,7 @@ export default function Team() {
       </div>
 
       {/* Results count */}
-      <p className="text-xs text-slate-400 font-medium">
+      <p className="text-xs text-neutral-400 font-medium">
         Показано: {filtered.length} из {volunteers.length}
       </p>
 
@@ -131,18 +131,18 @@ export default function Team() {
             <div
               key={v.id}
               onClick={() => navigate(`/team/${v.id}`)}
-              className="bg-white rounded-xl border border-slate-200/60 p-5 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary-200 group"
+              className="bg-white rounded-xl border border-neutral-200/60 p-5 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary-300/50 group"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 font-bold text-sm">
+                  <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center text-primary-800 font-bold text-sm">
                     {v.full_name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-800 truncate text-sm">
+                    <h3 className="font-semibold text-neutral-800 truncate text-sm">
                       {v.full_name}
                     </h3>
-                    <div className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
+                    <div className="flex items-center gap-1 text-xs text-neutral-400 mt-0.5">
                       <MapPin size={11} />
                       <span>{v.city || 'Город не указан'}</span>
                     </div>
@@ -155,7 +155,7 @@ export default function Team() {
                     className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200 ${
                       v.status === 'active'
                         ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                        : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                        : 'bg-neutral-50 text-neutral-400 hover:bg-neutral-100'
                     }`}
                     title={v.status === 'active' ? 'Деактивировать' : 'Активировать'}
                   >
@@ -169,7 +169,7 @@ export default function Team() {
                     className={`px-2 py-0.5 rounded-md text-xs font-semibold ${
                       v.status === 'active'
                         ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-slate-100 text-slate-500'
+                        : 'bg-neutral-100 text-neutral-500'
                     }`}
                   >
                     {v.status === 'active' ? 'Активен' : 'Неактивен'}
@@ -177,17 +177,17 @@ export default function Team() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between pt-3 border-t border-neutral-100">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1.5 text-sm">
-                    <Star size={13} className="text-accent-500" />
-                    <span className="font-semibold text-slate-700">
+                    <Star size={13} className="text-primary-500" />
+                    <span className="font-semibold text-neutral-700">
                       {v.points || 0}
                     </span>
-                    <span className="text-xs text-slate-400">баллов</span>
+                    <span className="text-xs text-neutral-400">баллов</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-primary-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 text-xs text-primary-700 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                   <span>Подробнее</span>
                   <ChevronRight size={14} />
                 </div>
@@ -197,9 +197,9 @@ export default function Team() {
         </div>
       ) : (
         <div className="text-center py-16">
-          <UserX size={32} className="mx-auto mb-3 text-slate-300" />
-          <p className="text-slate-500 text-sm font-medium">Волонтёры не найдены</p>
-          <p className="text-xs text-slate-400 mt-1">
+          <UserX size={32} className="mx-auto mb-3 text-neutral-300" />
+          <p className="text-neutral-500 text-sm font-medium">Волонтёры не найдены</p>
+          <p className="text-xs text-neutral-400 mt-1">
             Попробуйте изменить параметры поиска
           </p>
         </div>

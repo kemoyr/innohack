@@ -5,8 +5,8 @@ import api from '../api';
 const typeConfig = {
   volunteer: {
     icon: UserPlus,
-    bg: 'bg-blue-100',
-    text: 'text-blue-600',
+    bg: 'bg-primary-100',
+    text: 'text-primary-700',
   },
   submission: {
     icon: FileCheck,
@@ -15,13 +15,13 @@ const typeConfig = {
   },
   achievement: {
     icon: Award,
-    bg: 'bg-amber-100',
-    text: 'text-amber-600',
+    bg: 'bg-accent-100',
+    text: 'text-accent-600',
   },
   event: {
     icon: CalendarPlus,
-    bg: 'bg-purple-100',
-    text: 'text-purple-600',
+    bg: 'bg-neutral-100',
+    text: 'text-neutral-600',
   },
 };
 
@@ -63,7 +63,6 @@ export default function ActivityFeed() {
         const data = await api.getActivity();
         setActivities(data);
       } catch {
-        // Activity feed is optional, fail silently
         setActivities([]);
       } finally {
         setLoading(false);
@@ -82,7 +81,7 @@ export default function ActivityFeed() {
 
   if (activities.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+      <div className="flex flex-col items-center justify-center py-8 text-neutral-400">
         <Activity size={24} className="mb-2" />
         <p className="text-sm">Нет недавних действий</p>
       </div>
@@ -97,16 +96,16 @@ export default function ActivityFeed() {
         return (
           <div
             key={idx}
-            className="flex items-start gap-3 py-2.5 px-1 rounded-lg transition-colors hover:bg-slate-50"
+            className="flex items-start gap-3 py-2.5 px-1 rounded-lg transition-colors hover:bg-neutral-50"
           >
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${config.bg}`}>
               <Icon size={14} className={config.text} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-slate-700 leading-snug">
+              <p className="text-sm text-neutral-700 leading-snug">
                 {item.description}
               </p>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-neutral-400 mt-0.5">
                 {timeAgo(item.created_at)}
               </p>
             </div>

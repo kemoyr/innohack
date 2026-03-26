@@ -19,18 +19,18 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-64 bg-slate-900 text-white flex flex-col z-50">
+    <aside className="fixed left-0 top-0 bottom-0 w-64 bg-bee-black text-white flex flex-col z-50">
       {/* Logo */}
-      <div className="px-6 py-6 border-b border-slate-800">
+      <div className="px-6 py-6 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
-            <span className="text-white font-extrabold text-lg tracking-tight">V+</span>
+          <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
+            <span className="text-black font-extrabold text-lg tracking-tight">V+</span>
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight text-white">
               Volunteer<span className="text-primary-400">+</span>
             </h1>
-            <p className="text-xs text-slate-500">Панель координатора</p>
+            <p className="text-xs text-neutral-500">Панель координатора</p>
           </div>
         </div>
       </div>
@@ -47,8 +47,8 @@ export default function Sidebar() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? 'bg-primary-600/20 text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    ? 'bg-primary-500/15 text-primary-400'
+                    : 'text-neutral-400 hover:text-white hover:bg-white/5'
                 }`
               }
             >
@@ -59,24 +59,29 @@ export default function Sidebar() {
         })}
       </nav>
 
+      {/* Beeline stripe accent */}
+      <div className="mx-6 mb-4">
+        <div className="h-1 rounded-full bg-gradient-to-r from-primary-500 via-primary-400 to-primary-500" />
+      </div>
+
       {/* User info */}
-      <div className="px-4 py-3 mx-3 mb-2 rounded-lg bg-slate-800/60">
+      <div className="px-4 py-3 mx-3 mb-2 rounded-lg bg-white/5">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary-600/30 rounded-full flex items-center justify-center">
+          <div className="w-8 h-8 bg-primary-500/20 rounded-full flex items-center justify-center">
             <Shield size={14} className="text-primary-400" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-slate-300 truncate">Администратор</p>
-            <p className="text-xs text-slate-500">Координатор</p>
+            <p className="text-sm font-medium text-neutral-300 truncate">Администратор</p>
+            <p className="text-xs text-neutral-500">Координатор</p>
           </div>
         </div>
       </div>
 
       {/* Divider & Logout */}
-      <div className="px-3 py-3 border-t border-slate-800">
+      <div className="px-3 py-3 border-t border-white/10">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 w-full"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-neutral-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 w-full"
         >
           <LogOut size={18} strokeWidth={2} />
           <span>Выйти</span>

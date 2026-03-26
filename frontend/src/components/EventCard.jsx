@@ -4,8 +4,8 @@ const statusConfig = {
   planned: {
     icon: Clock,
     label: 'Ожидается',
-    badgeClass: 'bg-blue-50 text-blue-700 border border-blue-200/50',
-    iconClass: 'text-blue-500',
+    badgeClass: 'bg-primary-100 text-primary-800 border border-primary-300/50',
+    iconClass: 'text-primary-600',
   },
   completed: {
     icon: CheckCircle2,
@@ -48,25 +48,25 @@ export default function EventCard({ event }) {
   const StatusIcon = status.icon;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/60 p-4 transition-all duration-200 hover:shadow-md hover:border-slate-200">
+    <div className="bg-white rounded-xl border border-neutral-200/60 p-4 transition-all duration-200 hover:shadow-md hover:border-primary-300/50">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5 mb-2.5">
             <StatusIcon size={16} className={status.iconClass} />
-            <h3 className="font-semibold text-slate-800 truncate text-sm">
+            <h3 className="font-semibold text-neutral-800 truncate text-sm">
               {event.title}
             </h3>
           </div>
 
           <div className="space-y-1.5">
             {event.location_name && (
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <MapPin size={14} className="text-slate-400 shrink-0" />
+              <div className="flex items-center gap-2 text-sm text-neutral-500">
+                <MapPin size={14} className="text-neutral-400 shrink-0" />
                 <span className="truncate">{event.location_name}</span>
               </div>
             )}
-            <div className="flex items-center gap-2 text-sm text-slate-500">
-              <CalendarDays size={14} className="text-slate-400 shrink-0" />
+            <div className="flex items-center gap-2 text-sm text-neutral-500">
+              <CalendarDays size={14} className="text-neutral-400 shrink-0" />
               <span>
                 {formatDate(event.scheduled_date)}
                 {formatTime(event.scheduled_date) &&

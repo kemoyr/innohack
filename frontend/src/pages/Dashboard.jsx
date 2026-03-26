@@ -17,7 +17,7 @@ function formatCurrentDate() {
   });
 }
 
-const PIE_COLORS = ['#6366f1', '#10b981', '#ef4444'];
+const PIE_COLORS = ['#FFC800', '#10b981', '#ef4444'];
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -38,7 +38,6 @@ export default function Dashboard() {
         setEvents(eventsData);
         setLeaderboard(leaderData);
 
-        // Try to load chart data; generate fallback from events if endpoint not available
         try {
           const charts = await api.getChartData();
           const daily = (charts.daily_events || []).map(d => ({
@@ -47,7 +46,6 @@ export default function Dashboard() {
           }));
           setChartData(daily);
         } catch {
-          // Generate chart data from events for last 14 days
           const days = [];
           for (let i = 13; i >= 0; i--) {
             const d = new Date();
@@ -74,7 +72,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="flex items-center gap-3 text-slate-400">
+        <div className="flex items-center gap-3 text-neutral-400">
           <Loader2 className="h-6 w-6 animate-spin text-primary-500" />
           <span className="text-sm font-medium">Загрузка...</span>
         </div>
@@ -93,7 +91,6 @@ export default function Dashboard() {
 
   const topVolunteers = leaderboard.slice(0, 5);
 
-  // Event distribution for pie chart
   const planned = events.filter((e) => e.status === 'planned').length;
   const completed = events.filter((e) => e.status === 'completed').length;
   const cancelled = events.filter((e) => e.status === 'cancelled').length;
@@ -107,8 +104,8 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-slate-900">Обзор</h1>
-        <p className="text-sm text-slate-500 mt-0.5 capitalize">
+        <h1 className="text-xl font-bold text-neutral-900">Обзор</h1>
+        <p className="text-sm text-neutral-500 mt-0.5 capitalize">
           {formatCurrentDate()}
         </p>
       </div>
@@ -127,7 +124,7 @@ export default function Dashboard() {
           value={stats?.total_events || 0}
           subtitle={`${stats?.completed_events || 0} завершено`}
           icon={CalendarDays}
-          color="blue"
+          color="dark"
         />
         <StatsCard
           title="За эту неделю"
@@ -147,13 +144,13 @@ export default function Dashboard() {
 
       {/* Activity Chart */}
       {chartData.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200/60 p-6">
+        <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">Активность</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Мероприятия за последние 14 дней</p>
+              <h2 className="text-sm font-semibold text-neutral-900">Активность</h2>
+              <p className="text-xs text-neutral-500 mt-0.5">Мероприятия за последние 14 дней</p>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-400">
+            <div className="flex items-center gap-1.5 text-xs text-neutral-400">
               <Activity size={14} />
               <span>Мероприятия / день</span>
             </div>
@@ -163,39 +160,39 @@ export default function Dashboard() {
               <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.15} />
-                    <stop offset="100%" stopColor="#4f46e5" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#FFC800" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="#FFC800" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis
                   dataKey="date"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tick={{ fontSize: 11, fill: '#a3a3a3' }}
                   dy={8}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tick={{ fontSize: 11, fill: '#a3a3a3' }}
                   allowDecimals={false}
                 />
                 <Tooltip
                   contentStyle={{
-                    background: '#1e293b',
+                    background: '#1A1A1A',
                     border: 'none',
                     borderRadius: '8px',
                     fontSize: '12px',
-                    color: '#f1f5f9',
+                    color: '#f5f5f5',
                     padding: '8px 12px',
                   }}
-                  itemStyle={{ color: '#f1f5f9' }}
-                  labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                  itemStyle={{ color: '#FFC800' }}
+                  labelStyle={{ color: '#a3a3a3', marginBottom: '4px' }}
                 />
                 <Area
                   type="monotone"
                   dataKey="count"
-                  stroke="#4f46e5"
+                  stroke="#FFC800"
                   strokeWidth={2}
                   fill="url(#colorCount)"
                   name="Мероприятий"
@@ -211,14 +208,14 @@ export default function Dashboard() {
         {/* Left column - 2/3 */}
         <div className="lg:col-span-2 space-y-6">
           {/* Recent Events */}
-          <div className="bg-white rounded-xl border border-slate-200/60 p-6">
+          <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-slate-900">
+              <h2 className="text-sm font-semibold text-neutral-900">
                 Последние мероприятия
               </h2>
               <Link
                 to="/calendar"
-                className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 font-medium transition-colors"
+                className="flex items-center gap-1 text-xs text-primary-700 hover:text-primary-800 font-medium transition-colors"
               >
                 <span>Все мероприятия</span>
                 <ChevronRight size={14} />
@@ -231,20 +228,20 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : (
-              <div className="text-center text-slate-400 py-8">
-                <CalendarDays size={24} className="mx-auto mb-2 text-slate-300" />
+              <div className="text-center text-neutral-400 py-8">
+                <CalendarDays size={24} className="mx-auto mb-2 text-neutral-300" />
                 <p className="text-sm">Мероприятий пока нет</p>
               </div>
             )}
           </div>
 
           {/* Activity Feed */}
-          <div className="bg-white rounded-xl border border-slate-200/60 p-6">
+          <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-slate-900">
+              <h2 className="text-sm font-semibold text-neutral-900">
                 Лента активности
               </h2>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+              <div className="flex items-center gap-1.5 text-xs text-neutral-400">
                 <Activity size={14} />
                 <span>Недавнее</span>
               </div>
@@ -256,14 +253,14 @@ export default function Dashboard() {
         {/* Right column - 1/3 */}
         <div className="lg:col-span-1 space-y-6">
           {/* Mini leaderboard */}
-          <div className="bg-white rounded-xl border border-slate-200/60 p-6">
+          <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-slate-900">
+              <h2 className="text-sm font-semibold text-neutral-900">
                 Топ волонтёров
               </h2>
               <Link
                 to="/ratings"
-                className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 font-medium transition-colors"
+                className="flex items-center gap-1 text-xs text-primary-700 hover:text-primary-800 font-medium transition-colors"
               >
                 <span>Все</span>
                 <ChevronRight size={14} />
@@ -274,8 +271,8 @@ export default function Dashboard() {
 
           {/* Event Distribution */}
           {pieData.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200/60 p-6">
-              <h2 className="text-sm font-semibold text-slate-900 mb-4">
+            <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
+              <h2 className="text-sm font-semibold text-neutral-900 mb-4">
                 Распределение мероприятий
               </h2>
               <div className="h-48">
@@ -297,14 +294,14 @@ export default function Dashboard() {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        background: '#1e293b',
+                        background: '#1A1A1A',
                         border: 'none',
                         borderRadius: '8px',
                         fontSize: '12px',
-                        color: '#f1f5f9',
+                        color: '#f5f5f5',
                         padding: '8px 12px',
                       }}
-                      itemStyle={{ color: '#f1f5f9' }}
+                      itemStyle={{ color: '#f5f5f5' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -316,7 +313,7 @@ export default function Dashboard() {
                       className="w-2.5 h-2.5 rounded-full"
                       style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }}
                     />
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-neutral-500">
                       {entry.name} ({entry.value})
                     </span>
                   </div>

@@ -14,19 +14,20 @@ function formatDate(dateStr) {
 }
 
 const badgeGradients = {
-  gold: 'from-amber-400 to-yellow-500',
-  silver: 'from-slate-400 to-slate-500',
-  bronze: 'from-orange-400 to-amber-500',
-  default: 'from-primary-500 to-primary-700',
+  gold: 'from-primary-400 to-primary-600',
+  silver: 'from-neutral-400 to-neutral-500',
+  bronze: 'from-accent-400 to-accent-600',
+  default: 'from-neutral-700 to-neutral-900',
 };
 
 const podiumConfig = [
   {
     place: 1,
-    gradient: 'from-amber-400 to-yellow-500',
-    ring: 'ring-amber-300',
-    bg: 'bg-amber-50',
-    rankBg: 'bg-amber-400',
+    gradient: 'from-primary-400 to-primary-600',
+    ring: 'ring-primary-300',
+    bg: 'bg-primary-50',
+    rankBg: 'bg-primary-500',
+    rankText: 'text-black',
     size: 'w-20 h-20',
     textSize: 'text-2xl',
     order: 'order-2',
@@ -34,10 +35,11 @@ const podiumConfig = [
   },
   {
     place: 2,
-    gradient: 'from-slate-300 to-slate-400',
-    ring: 'ring-slate-300',
-    bg: 'bg-slate-50',
-    rankBg: 'bg-slate-400',
+    gradient: 'from-neutral-300 to-neutral-400',
+    ring: 'ring-neutral-300',
+    bg: 'bg-neutral-50',
+    rankBg: 'bg-neutral-400',
+    rankText: 'text-white',
     size: 'w-16 h-16',
     textSize: 'text-xl',
     order: 'order-1',
@@ -45,10 +47,11 @@ const podiumConfig = [
   },
   {
     place: 3,
-    gradient: 'from-orange-400 to-amber-500',
-    ring: 'ring-orange-300',
-    bg: 'bg-orange-50',
-    rankBg: 'bg-orange-400',
+    gradient: 'from-accent-400 to-accent-600',
+    ring: 'ring-accent-400/50',
+    bg: 'bg-accent-50',
+    rankBg: 'bg-accent-500',
+    rankText: 'text-white',
     size: 'w-16 h-16',
     textSize: 'text-xl',
     order: 'order-3',
@@ -84,7 +87,7 @@ export default function Ratings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="flex items-center gap-3 text-slate-400">
+        <div className="flex items-center gap-3 text-neutral-400">
           <Loader2 className="h-6 w-6 animate-spin text-primary-500" />
           <span className="text-sm font-medium">Загрузка...</span>
         </div>
@@ -95,7 +98,6 @@ export default function Ratings() {
   const top3 = leaderboard.slice(0, 3);
   const maxPoints = leaderboard[0]?.points || 1;
 
-  // Chart data: top 10 volunteers
   const chartBarData = leaderboard.slice(0, 10).map((p) => ({
     name: p.full_name?.split(' ')[0] || '?',
     points: p.points,
@@ -105,8 +107,8 @@ export default function Ratings() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-slate-900">Рейтинг</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+        <h1 className="text-xl font-bold text-neutral-900">Рейтинг</h1>
+        <p className="text-sm text-neutral-500 mt-0.5">
           Лидерборд и достижения волонтёров
         </p>
       </div>
@@ -117,8 +119,8 @@ export default function Ratings() {
           onClick={() => setTab('leaderboard')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
             tab === 'leaderboard'
-              ? 'bg-primary-600 text-white shadow-md shadow-primary-600/25'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              ? 'bg-primary-500 text-black shadow-md shadow-primary-500/25'
+              : 'bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50'
           }`}
         >
           <Trophy size={15} />
@@ -128,8 +130,8 @@ export default function Ratings() {
           onClick={() => setTab('achievements')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
             tab === 'achievements'
-              ? 'bg-primary-600 text-white shadow-md shadow-primary-600/25'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              ? 'bg-primary-500 text-black shadow-md shadow-primary-500/25'
+              : 'bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50'
           }`}
         >
           <Award size={15} />
@@ -137,8 +139,8 @@ export default function Ratings() {
           <span
             className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${
               tab === 'achievements'
-                ? 'bg-white/20'
-                : 'bg-slate-100 text-slate-500'
+                ? 'bg-black/10'
+                : 'bg-neutral-100 text-neutral-500'
             }`}
           >
             {achievements.length}
@@ -150,7 +152,7 @@ export default function Ratings() {
         <div className="space-y-6">
           {/* Podium - Top 3 */}
           {top3.length >= 3 && (
-            <div className="bg-white rounded-xl border border-slate-200/60 p-8">
+            <div className="bg-white rounded-xl border border-neutral-200/60 p-8">
               <div className="flex items-end justify-center gap-6 md:gap-10">
                 {podiumConfig.map((config) => {
                   const person = top3[config.place - 1];
@@ -161,7 +163,7 @@ export default function Ratings() {
                       className={`flex flex-col items-center cursor-pointer transition-all duration-200 hover:-translate-y-1 ${config.order} ${config.mt}`}
                       onClick={() => navigate(`/team/${person.id}`)}
                     >
-                      <div className={`w-8 h-8 ${config.rankBg} rounded-full flex items-center justify-center text-white text-sm font-bold mb-3 shadow-sm`}>
+                      <div className={`w-8 h-8 ${config.rankBg} rounded-full flex items-center justify-center ${config.rankText} text-sm font-bold mb-3 shadow-sm`}>
                         {config.place}
                       </div>
                       <div
@@ -169,18 +171,18 @@ export default function Ratings() {
                       >
                         {person.full_name?.charAt(0)?.toUpperCase() || '?'}
                       </div>
-                      <p className="font-semibold text-slate-800 text-sm text-center">
+                      <p className="font-semibold text-neutral-800 text-sm text-center">
                         {person.full_name}
                       </p>
-                      <p className="text-xs text-slate-500">{person.city}</p>
-                      <div className="mt-2 flex items-center gap-1 px-2.5 py-1 bg-accent-50 rounded-lg">
-                        <Star size={12} className="text-accent-500" />
-                        <span className="font-bold text-xs text-accent-600">
+                      <p className="text-xs text-neutral-500">{person.city}</p>
+                      <div className="mt-2 flex items-center gap-1 px-2.5 py-1 bg-primary-50 rounded-lg">
+                        <Star size={12} className="text-primary-500" />
+                        <span className="font-bold text-xs text-primary-800">
                           {person.points}
                         </span>
                       </div>
                       {person.submission_count != null && (
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-xs text-neutral-400 mt-1">
                           {person.submission_count} отчётов
                         </p>
                       )}
@@ -193,7 +195,7 @@ export default function Ratings() {
 
           {/* Podium fallback for fewer than 3 */}
           {top3.length > 0 && top3.length < 3 && (
-            <div className="bg-white rounded-xl border border-slate-200/60 p-6">
+            <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
               <div className="flex justify-center gap-8">
                 {top3.map((person, idx) => {
                   const config = podiumConfig[idx];
@@ -203,7 +205,7 @@ export default function Ratings() {
                       className="flex flex-col items-center cursor-pointer transition-all duration-200 hover:-translate-y-1"
                       onClick={() => navigate(`/team/${person.id}`)}
                     >
-                      <div className={`w-8 h-8 ${config.rankBg} rounded-full flex items-center justify-center text-white text-sm font-bold mb-3`}>
+                      <div className={`w-8 h-8 ${config.rankBg} rounded-full flex items-center justify-center ${config.rankText} text-sm font-bold mb-3`}>
                         {config.place}
                       </div>
                       <div
@@ -211,11 +213,11 @@ export default function Ratings() {
                       >
                         {person.full_name?.charAt(0)?.toUpperCase() || '?'}
                       </div>
-                      <p className="font-semibold text-slate-800 text-sm">{person.full_name}</p>
-                      <p className="text-xs text-slate-500">{person.city}</p>
-                      <div className="mt-2 flex items-center gap-1 px-2.5 py-1 bg-accent-50 rounded-lg">
-                        <Star size={12} className="text-accent-500" />
-                        <span className="font-bold text-xs text-accent-600">{person.points}</span>
+                      <p className="font-semibold text-neutral-800 text-sm">{person.full_name}</p>
+                      <p className="text-xs text-neutral-500">{person.city}</p>
+                      <div className="mt-2 flex items-center gap-1 px-2.5 py-1 bg-primary-50 rounded-lg">
+                        <Star size={12} className="text-primary-500" />
+                        <span className="font-bold text-xs text-primary-800">{person.points}</span>
                       </div>
                     </div>
                   );
@@ -226,8 +228,8 @@ export default function Ratings() {
 
           {/* Points Distribution Chart */}
           {chartBarData.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200/60 p-6">
-              <h2 className="text-sm font-semibold text-slate-900 mb-4">
+            <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
+              <h2 className="text-sm font-semibold text-neutral-900 mb-4">
                 Распределение баллов
               </h2>
               <div className="h-56">
@@ -237,29 +239,29 @@ export default function Ratings() {
                       dataKey="name"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 11, fill: '#94a3b8' }}
+                      tick={{ fontSize: 11, fill: '#a3a3a3' }}
                       dy={8}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 11, fill: '#94a3b8' }}
+                      tick={{ fontSize: 11, fill: '#a3a3a3' }}
                     />
                     <Tooltip
                       contentStyle={{
-                        background: '#1e293b',
+                        background: '#1A1A1A',
                         border: 'none',
                         borderRadius: '8px',
                         fontSize: '12px',
-                        color: '#f1f5f9',
+                        color: '#f5f5f5',
                         padding: '8px 12px',
                       }}
-                      itemStyle={{ color: '#f1f5f9' }}
-                      labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                      itemStyle={{ color: '#FFC800' }}
+                      labelStyle={{ color: '#a3a3a3', marginBottom: '4px' }}
                     />
                     <Bar
                       dataKey="points"
-                      fill="#4f46e5"
+                      fill="#FFC800"
                       radius={[6, 6, 0, 0]}
                       name="Баллы"
                     />
@@ -271,37 +273,37 @@ export default function Ratings() {
 
           {/* Full Table */}
           {leaderboard.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200/60 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100">
-                <h2 className="text-sm font-semibold text-slate-900">
+            <div className="bg-white rounded-xl border border-neutral-200/60 overflow-hidden">
+              <div className="px-6 py-4 border-b border-neutral-100">
+                <h2 className="text-sm font-semibold text-neutral-900">
                   Полный рейтинг ({leaderboard.length} участников)
                 </h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="bg-slate-50/80">
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16">
+                    <tr className="bg-neutral-50/80">
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-16">
                         #
                       </th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                         Имя
                       </th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                         Город
                       </th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                         Прогресс
                       </th>
-                      <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-24">
+                      <th className="text-right px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-24">
                         Баллы
                       </th>
-                      <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-24">
+                      <th className="text-right px-6 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-24">
                         Отчёты
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-neutral-50">
                     {leaderboard.map((person, idx) => {
                       const rank = idx + 1;
                       const barWidth = Math.max(
@@ -310,9 +312,9 @@ export default function Ratings() {
                       );
                       const isTop3 = rank <= 3;
                       const rankColors = [
-                        'bg-amber-400 text-white',
-                        'bg-slate-400 text-white',
-                        'bg-orange-400 text-white',
+                        'bg-primary-500 text-black',
+                        'bg-neutral-400 text-white',
+                        'bg-accent-500 text-white',
                       ];
                       return (
                         <tr
@@ -326,7 +328,7 @@ export default function Ratings() {
                                 {rank}
                               </div>
                             ) : (
-                              <span className="font-semibold text-sm text-slate-400 pl-1.5">
+                              <span className="font-semibold text-sm text-neutral-400 pl-1.5">
                                 {rank}
                               </span>
                             )}
@@ -336,30 +338,30 @@ export default function Ratings() {
                               <div
                                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
                                   isTop3
-                                    ? 'bg-primary-100 text-primary-600'
-                                    : 'bg-slate-100 text-slate-500'
+                                    ? 'bg-primary-100 text-primary-800'
+                                    : 'bg-neutral-100 text-neutral-500'
                                 }`}
                               >
                                 {person.full_name?.charAt(0)?.toUpperCase() || '?'}
                               </div>
                               <span
                                 className={`text-sm font-medium ${
-                                  isTop3 ? 'text-slate-800' : 'text-slate-600'
+                                  isTop3 ? 'text-neutral-800' : 'text-neutral-600'
                                 }`}
                               >
                                 {person.full_name}
                               </span>
                             </div>
                           </td>
-                          <td className="px-6 py-3.5 text-sm text-slate-500">
+                          <td className="px-6 py-3.5 text-sm text-neutral-500">
                             {person.city || '---'}
                           </td>
                           <td className="px-6 py-3.5">
-                            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full transition-all duration-500 ${
                                   isTop3
-                                    ? 'bg-gradient-to-r from-primary-500 to-accent-400'
+                                    ? 'bg-gradient-to-r from-primary-500 to-primary-400'
                                     : 'bg-primary-300/40'
                                 }`}
                                 style={{ width: `${barWidth}%` }}
@@ -368,17 +370,17 @@ export default function Ratings() {
                           </td>
                           <td className="px-6 py-3.5 text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Star size={12} className="text-accent-500" />
+                              <Star size={12} className="text-primary-500" />
                               <span
                                 className={`font-bold text-sm ${
-                                  isTop3 ? 'text-accent-600' : 'text-slate-600'
+                                  isTop3 ? 'text-primary-800' : 'text-neutral-600'
                                 }`}
                               >
                                 {person.points}
                               </span>
                             </div>
                           </td>
-                          <td className="px-6 py-3.5 text-right text-sm text-slate-500">
+                          <td className="px-6 py-3.5 text-right text-sm text-neutral-500">
                             {person.submission_count ?? '---'}
                           </td>
                         </tr>
@@ -392,8 +394,8 @@ export default function Ratings() {
 
           {leaderboard.length === 0 && (
             <div className="text-center py-16">
-              <Trophy size={32} className="mx-auto mb-3 text-slate-300" />
-              <p className="text-slate-500 text-sm font-medium">Пока нет данных для рейтинга</p>
+              <Trophy size={32} className="mx-auto mb-3 text-neutral-300" />
+              <p className="text-neutral-500 text-sm font-medium">Пока нет данных для рейтинга</p>
             </div>
           )}
         </div>
@@ -407,7 +409,7 @@ export default function Ratings() {
                 return (
                   <div
                     key={ach.id}
-                    className="bg-white rounded-xl border border-slate-200/60 overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+                    className="bg-white rounded-xl border border-neutral-200/60 overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
                   >
                     <div className={`bg-gradient-to-r ${gradient} px-5 py-4 text-white`}>
                       <div className="flex items-center gap-3">
@@ -434,14 +436,14 @@ export default function Ratings() {
                     </div>
                     <div className="px-5 py-3 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-xs text-primary-600 font-bold">
+                        <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-xs text-primary-800 font-bold">
                           {ach.volunteer_name?.charAt(0)?.toUpperCase() || '?'}
                         </div>
-                        <span className="text-xs font-medium text-slate-700 truncate">
+                        <span className="text-xs font-medium text-neutral-700 truncate">
                           {ach.volunteer_name}
                         </span>
                       </div>
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-neutral-400">
                         {formatDate(ach.created_at)}
                       </span>
                     </div>
@@ -451,8 +453,8 @@ export default function Ratings() {
             </div>
           ) : (
             <div className="text-center py-16">
-              <Award size={32} className="mx-auto mb-3 text-slate-300" />
-              <p className="text-slate-500 text-sm font-medium">Достижений пока нет</p>
+              <Award size={32} className="mx-auto mb-3 text-neutral-300" />
+              <p className="text-neutral-500 text-sm font-medium">Достижений пока нет</p>
             </div>
           )}
         </div>
