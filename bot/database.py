@@ -98,6 +98,33 @@ async def init_db():
                 created_at TEXT DEFAULT (datetime('now'))
             );
 
+            CREATE TABLE IF NOT EXISTS event_applications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL REFERENCES events(id),
+                volunteer_id INTEGER NOT NULL REFERENCES volunteers(id),
+                full_name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                phone TEXT DEFAULT '',
+                status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
+                created_at TEXT DEFAULT (datetime('now')),
+                UNIQUE(event_id, volunteer_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS event_reviews (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL REFERENCES events(id),
+                volunteer_id INTEGER NOT NULL REFERENCES volunteers(id),
+                rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+                comment TEXT DEFAULT '',
+                created_at TEXT DEFAULT (datetime('now')),
+                UNIQUE(event_id, volunteer_id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_event_applications_event ON event_applications(event_id);
+            CREATE INDEX IF NOT EXISTS idx_event_applications_volunteer ON event_applications(volunteer_id);
+            CREATE INDEX IF NOT EXISTS idx_event_reviews_event ON event_reviews(event_id);
+            CREATE INDEX IF NOT EXISTS idx_event_reviews_volunteer ON event_reviews(volunteer_id);
+
             CREATE INDEX IF NOT EXISTS idx_volunteers_telegram_id ON volunteers(telegram_id);
             CREATE INDEX IF NOT EXISTS idx_volunteers_email ON volunteers(email);
             CREATE INDEX IF NOT EXISTS idx_submissions_volunteer_id ON submissions(volunteer_id);
@@ -739,6 +766,156 @@ async def get_recent_submissions(limit: int = 20):
         )
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
+
+
+# ── Event Applications ──────────
+
+
+async def create_application(event_id: int, volunteer_id: int, full_name: str, email: str, phone: str = ""):
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            """INSERT INTO event_applications (event_id, volunteer_id, full_name, email, phone)
+               VALUES (?, ?, ?, ?, ?)""",
+            (event_id, volunteer_id, full_name, email, phone),
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+
+async def get_application(event_id: int, volunteer_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM event_applications WHERE event_id = ? AND volunteer_id = ?",
+            (event_id, volunteer_id),
+        )
+        row = await cursor.fetchone()
+        return _row_to_dict(row)
+
+
+async def get_event_applications(event_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """SELECT ea.*, v.full_name as volunteer_name, v.city
+               FROM event_applications ea
+               JOIN volunteers v ON ea.volunteer_id = v.id
+               WHERE ea.event_id = ?
+               ORDER BY ea.created_at DESC""",
+            (event_id,),
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+
+
+async def get_volunteer_applications(volunteer_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """SELECT ea.*, e.title as event_title, e.scheduled_date, e.location_name, e.status as event_status
+               FROM event_applications ea
+               JOIN events e ON ea.event_id = e.id
+               WHERE ea.volunteer_id = ?
+               ORDER BY ea.created_at DESC""",
+            (volunteer_id,),
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+
+
+async def get_event_application_count(event_id: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "SELECT COUNT(*) as cnt FROM event_applications WHERE event_id = ?",
+            (event_id,),
+        )
+        row = await cursor.fetchone()
+        return row[0]
+
+
+# ── Event Reviews ──────────────
+
+
+async def create_review(event_id: int, volunteer_id: int, rating: int, comment: str = ""):
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            """INSERT INTO event_reviews (event_id, volunteer_id, rating, comment)
+               VALUES (?, ?, ?, ?)""",
+            (event_id, volunteer_id, rating, comment),
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+
+async def get_event_reviews(event_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """SELECT er.*, v.full_name as volunteer_name
+               FROM event_reviews er
+               JOIN volunteers v ON er.volunteer_id = v.id
+               WHERE er.event_id = ?
+               ORDER BY er.created_at DESC""",
+            (event_id,),
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+
+
+async def get_volunteer_reviews(volunteer_id: int):
+    """Reviews written BY this volunteer."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """SELECT er.*, e.title as event_title, e.scheduled_date
+               FROM event_reviews er
+               JOIN events e ON er.event_id = e.id
+               WHERE er.volunteer_id = ?
+               ORDER BY er.created_at DESC""",
+            (volunteer_id,),
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+
+
+async def get_event_avg_rating(event_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "SELECT AVG(rating) as avg_rating, COUNT(*) as count FROM event_reviews WHERE event_id = ?",
+            (event_id,),
+        )
+        row = await cursor.fetchone()
+        return {"avg_rating": round(row[0], 1) if row[0] else 0, "count": row[1]}
+
+
+async def get_organizer_rating(coordinator_id: int):
+    """Rating for event organizer: avg rating and total participants across their events."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        # Get all events by this coordinator
+        cursor = await db.execute(
+            "SELECT id, attendance_count FROM events WHERE coordinator_id = ? OR created_by = ?",
+            (coordinator_id, coordinator_id),
+        )
+        events = await cursor.fetchall()
+        event_ids = [e["id"] for e in events]
+        total_participants = sum(e["attendance_count"] or 0 for e in events)
+
+        if not event_ids:
+            return {"avg_rating": 0, "review_count": 0, "total_participants": 0, "event_count": 0}
+
+        placeholders = ",".join("?" * len(event_ids))
+        cursor = await db.execute(
+            f"SELECT AVG(rating) as avg_rating, COUNT(*) as cnt FROM event_reviews WHERE event_id IN ({placeholders})",
+            event_ids,
+        )
+        row = await cursor.fetchone()
+        return {
+            "avg_rating": round(row["avg_rating"], 1) if row["avg_rating"] else 0,
+            "review_count": row["cnt"],
+            "total_participants": total_participants,
+            "event_count": len(event_ids),
+        }
 
 
 async def get_recent_achievements(limit: int = 10):

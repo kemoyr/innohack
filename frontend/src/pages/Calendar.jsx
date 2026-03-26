@@ -183,7 +183,9 @@ export default function Calendar() {
               </h3>
               <div className="space-y-2.5">
                 {group.events.map((event) => (
-                  <EventCard key={event.id} event={event} />
+                  <EventCard key={event.id} event={event} onApplied={() => {
+                    api.getEvents().then(setEvents).catch(console.error);
+                  }} />
                 ))}
               </div>
             </div>

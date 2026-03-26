@@ -6,6 +6,8 @@ from bot.database import (
     get_achievements,
     get_all_events,
     toggle_volunteer_status,
+    get_volunteer_reviews,
+    get_organizer_rating,
 )
 from bot.api.routes.auth import get_current_coordinator
 
@@ -48,6 +50,8 @@ async def get_volunteer_detail(volunteer_id: int):
 
     submissions = await get_volunteer_submissions(volunteer_id)
     achievements = await get_achievements(volunteer_id)
+    reviews = await get_volunteer_reviews(volunteer_id)
+    org_rating = await get_organizer_rating(volunteer_id)
 
     # Enrich submissions with event titles
     events = await get_all_events()
@@ -63,6 +67,8 @@ async def get_volunteer_detail(volunteer_id: int):
         **vol,
         "submissions": enriched_submissions,
         "achievements": achievements,
+        "reviews": reviews,
+        "organizer_rating": org_rating,
     }
 
 

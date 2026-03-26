@@ -122,6 +122,17 @@ const api = {
   uploadVerification: (eventId, formData) => uploadRequest('POST', `/api/events/${eventId}/verify`, formData),
   getVerification: (eventId) => request('GET', `/api/events/${eventId}/verification`),
 
+  // Applications
+  applyToEvent: (eventId, data) => request('POST', `/api/events/${eventId}/apply`, data),
+  getMyApplications: () => request('GET', '/api/events/my/applications'),
+  getMyApplication: (eventId) => request('GET', `/api/events/${eventId}/my-application`),
+  getEventApplications: (eventId) => request('GET', `/api/events/${eventId}/applications`),
+
+  // Reviews
+  reviewEvent: (eventId, data) => request('POST', `/api/events/${eventId}/review`, data),
+  getEventReviews: (eventId) => publicRequest('GET', `/api/events/${eventId}/reviews`),
+  getVolunteerReviews: (volunteerId) => publicRequest('GET', `/api/volunteers/${volunteerId}/reviews`),
+
   // Moderation (coordinator)
   getModerationQueue: () => request('GET', '/api/moderation/queue'),
   getModerationHistory: () => request('GET', '/api/moderation/history'),

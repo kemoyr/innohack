@@ -5,7 +5,7 @@ from typing import Optional
 from bot.database import (
     get_all_events, get_public_events, get_pending_events,
     create_event, update_event_status, get_all_volunteers,
-    get_event_by_id,
+    get_event_by_id, get_event_application_count, get_event_avg_rating,
 )
 from bot.api.routes.auth import get_current_coordinator, get_current_user, get_optional_user
 from bot.utils.qr import generate_event_code
@@ -40,10 +40,15 @@ async def list_events(user=Depends(get_optional_user)):
 
     result = []
     for ev in events:
+        app_count = await get_event_application_count(ev["id"])
+        avg = await get_event_avg_rating(ev["id"])
         result.append({
             **ev,
             "coordinator_name": vol_map.get(ev.get("coordinator_id"), "—"),
             "creator_name": vol_map.get(ev.get("created_by"), "—"),
+            "application_count": app_count,
+            "avg_rating": avg["avg_rating"],
+            "review_count": avg["count"],
         })
     return result
 

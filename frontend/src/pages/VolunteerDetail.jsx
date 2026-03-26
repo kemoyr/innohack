@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, MessageCircle, Calendar, Star, FileText, Award, Medal, Loader2, AlertCircle, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, MessageCircle, Calendar, Star, FileText, Award, Medal, Loader2, AlertCircle, CheckCircle2, Clock, XCircle, Users } from 'lucide-react';
 import api from '../api';
 
 function formatDate(dateStr) {
@@ -75,6 +75,8 @@ export default function VolunteerDetail() {
 
   const submissions = volunteer.submissions || [];
   const achievements = volunteer.achievements || [];
+  const reviews = volunteer.reviews || [];
+  const orgRating = volunteer.organizer_rating || {};
 
   return (
     <div className="space-y-6">
@@ -171,6 +173,37 @@ export default function VolunteerDetail() {
         </div>
       </div>
 
+      {/* Organizer Rating Card */}
+      {orgRating.event_count > 0 && (
+        <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Star size={16} className="text-primary-500" />
+            <h2 className="text-sm font-semibold text-neutral-900">Рейтинг организатора</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Star size={14} className="fill-primary-500 text-primary-500" />
+              </div>
+              <p className="text-2xl font-bold text-neutral-900">{orgRating.avg_rating || 0}</p>
+              <p className="text-xs text-neutral-500">Средняя оценка</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-neutral-900">{orgRating.review_count || 0}</p>
+              <p className="text-xs text-neutral-500 mt-1">Отзывов</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-neutral-900">{orgRating.total_participants || 0}</p>
+              <p className="text-xs text-neutral-500 mt-1">Участников</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-neutral-900">{orgRating.event_count || 0}</p>
+              <p className="text-xs text-neutral-500 mt-1">Мероприятий</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Submissions */}
         <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
@@ -253,6 +286,39 @@ export default function VolunteerDetail() {
           )}
         </div>
       </div>
+
+      {/* Reviews written by this volunteer */}
+      {reviews.length > 0 && (
+        <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Star size={16} className="text-primary-500" />
+            <h2 className="text-sm font-semibold text-neutral-900">Отзывы</h2>
+            <span className="text-xs text-neutral-400 ml-auto">{reviews.length}</span>
+          </div>
+          <div className="space-y-3">
+            {reviews.map((rev) => (
+              <div key={rev.id} className="p-4 rounded-lg bg-neutral-50/50 border border-neutral-100">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-neutral-700">{rev.event_title}</p>
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        size={12}
+                        className={s <= rev.rating ? 'fill-primary-500 text-primary-500' : 'text-neutral-300'}
+                      />
+                    ))}
+                  </div>
+                </div>
+                {rev.comment && (
+                  <p className="text-xs text-neutral-500">{rev.comment}</p>
+                )}
+                <p className="text-xs text-neutral-400 mt-1.5">{formatDate(rev.created_at)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
