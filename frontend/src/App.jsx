@@ -23,7 +23,7 @@ function PublicLayout({ children }) {
   );
 }
 
-function CoordinatorLayout({ children }) {
+function SidebarLayout({ children }) {
   return (
     <div className="dashboard-layout">
       <Sidebar />
@@ -34,34 +34,29 @@ function CoordinatorLayout({ children }) {
   );
 }
 
+function AuthRoute({ children }) {
+  const token = getToken();
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return <SidebarLayout>{children}</SidebarLayout>;
+}
+
 function CoordinatorRoute({ children }) {
   const token = getToken();
   const user = getUser();
   if (!token || !user || user.role !== 'coordinator') {
     return <Navigate to="/login" replace />;
   }
-  return <CoordinatorLayout>{children}</CoordinatorLayout>;
+  return <SidebarLayout>{children}</SidebarLayout>;
 }
 
-function AuthRoute({ children }) {
+function SmartRoute({ children }) {
   const token = getToken();
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-  const user = getUser();
-  if (user?.role === 'coordinator') {
-    return <CoordinatorLayout>{children}</CoordinatorLayout>;
+  if (token) {
+    return <SidebarLayout>{children}</SidebarLayout>;
   }
   return <PublicLayout>{children}</PublicLayout>;
-}
-
-function SmartRedirect() {
-  const token = getToken();
-  const user = getUser();
-  if (token && user?.role === 'coordinator') {
-    return <CoordinatorLayout><Dashboard /></CoordinatorLayout>;
-  }
-  return <PublicLayout><Dashboard /></PublicLayout>;
 }
 
 export default function App() {
@@ -70,34 +65,19 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Public/Smart routes */}
-      <Route path="/" element={<SmartRedirect />} />
-      <Route
-        path="/calendar"
-        element={
-          getToken() && getUser()?.role === 'coordinator'
-            ? <CoordinatorRoute><Calendar /></CoordinatorRoute>
-            : <PublicLayout><Calendar /></PublicLayout>
-        }
-      />
-      <Route
-        path="/ratings"
-        element={
-          getToken() && getUser()?.role === 'coordinator'
-            ? <CoordinatorRoute><Ratings /></CoordinatorRoute>
-            : <PublicLayout><Ratings /></PublicLayout>
-        }
-      />
+      {/* Public or sidebar depending on auth */}
+      <Route path="/" element={<SmartRoute><Dashboard /></SmartRoute>} />
+      <Route path="/calendar" element={<SmartRoute><Calendar /></SmartRoute>} />
+      <Route path="/ratings" element={<SmartRoute><Ratings /></SmartRoute>} />
 
       {/* Coordinator-only */}
-      <Route path="/admin" element={<CoordinatorRoute><Dashboard /></CoordinatorRoute>} />
       <Route path="/team" element={<CoordinatorRoute><Team /></CoordinatorRoute>} />
       <Route path="/team/:id" element={<CoordinatorRoute><VolunteerDetail /></CoordinatorRoute>} />
-      <Route path="/settings" element={<CoordinatorRoute><SettingsPage /></CoordinatorRoute>} />
       <Route path="/moderation" element={<CoordinatorRoute><ModerationPage /></CoordinatorRoute>} />
 
-      {/* Volunteer auth-required */}
+      {/* Any authenticated user */}
       <Route path="/my-events" element={<AuthRoute><MyEvents /></AuthRoute>} />
+      <Route path="/settings" element={<AuthRoute><SettingsPage /></AuthRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

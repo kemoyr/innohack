@@ -98,9 +98,8 @@ async function uploadRequest(method, path, formData) {
 
 const api = {
   // Auth
-  login: (password) => publicRequest('POST', '/api/auth/login', { password }),
+  login: ({ email, password }) => publicRequest('POST', '/api/auth/login', { email, password }),
   register: (data) => publicRequest('POST', '/api/auth/register', data),
-  loginVolunteer: (data) => publicRequest('POST', '/api/auth/login/volunteer', data),
   getMe: () => request('GET', '/api/auth/me'),
 
   // Public

@@ -1,8 +1,8 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { clearToken } from '../api';
-import { LayoutDashboard, Users, CalendarDays, Trophy, Settings, LogOut, Shield, ShieldCheck } from 'lucide-react';
+import { clearToken, getUser } from '../api';
+import { LayoutDashboard, Users, CalendarDays, Trophy, Settings, LogOut, Shield, ShieldCheck, ClipboardList } from 'lucide-react';
 
-const navItems = [
+const coordinatorNav = [
   { to: '/', label: 'Обзор', icon: LayoutDashboard },
   { to: '/team', label: 'Команда', icon: Users },
   { to: '/calendar', label: 'Календарь', icon: CalendarDays },
@@ -11,8 +11,19 @@ const navItems = [
   { to: '/settings', label: 'Настройки', icon: Settings },
 ];
 
+const volunteerNav = [
+  { to: '/', label: 'Обзор', icon: LayoutDashboard },
+  { to: '/my-events', label: 'Мои мероприятия', icon: ClipboardList },
+  { to: '/calendar', label: 'Календарь', icon: CalendarDays },
+  { to: '/ratings', label: 'Рейтинг', icon: Trophy },
+  { to: '/settings', label: 'Настройки', icon: Settings },
+];
+
 export default function Sidebar() {
   const navigate = useNavigate();
+  const user = getUser();
+  const isCoordinator = user?.role === 'coordinator';
+  const navItems = isCoordinator ? coordinatorNav : volunteerNav;
 
   function handleLogout() {
     clearToken();
@@ -31,7 +42,9 @@ export default function Sidebar() {
             <h1 className="text-lg font-bold tracking-tight text-white">
               Volunteer<span className="text-primary-400">+</span>
             </h1>
-            <p className="text-xs text-neutral-500">Панель координатора</p>
+            <p className="text-xs text-neutral-500">
+              {isCoordinator ? 'Панель координатора' : 'Панель волонтёра'}
+            </p>
           </div>
         </div>
       </div>
@@ -72,8 +85,12 @@ export default function Sidebar() {
             <Shield size={14} className="text-primary-400" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-neutral-300 truncate">Администратор</p>
-            <p className="text-xs text-neutral-500">Координатор</p>
+            <p className="text-sm font-medium text-neutral-300 truncate">
+              {user?.full_name || 'Пользователь'}
+            </p>
+            <p className="text-xs text-neutral-500">
+              {isCoordinator ? 'Координатор' : 'Волонтёр'}
+            </p>
           </div>
         </div>
       </div>

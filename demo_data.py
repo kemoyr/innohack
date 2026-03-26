@@ -127,7 +127,7 @@ VOLUNTEERS = [
     (100010, "kirill_p", "Кирилл Попов", "Екатеринбург", "+79001010101", "kirill@example.com", "volunteer", "active", 10),
 ]
 
-COORDINATOR = (200001, "coordinator_main", "Мария Координаторова", "Москва", "+79000000001", "coordinator", "active", 0)
+COORDINATOR = (200001, "coordinator_main", "Мария Координаторова", "Москва", "+79000000001", "coordinator@example.com", "coordinator", "active", 0)
 
 COMPLETED_EVENTS = [
     ("Лекция по программированию", "Введение в Python для школьников", "Школа №42, Москва",
@@ -191,10 +191,11 @@ def main():
     demo_pw = hash_pw("demo123")
 
     # Insert coordinator
+    tg_id, username, name, city, phone, email, role, status, points = COORDINATOR
     conn.execute(
-        """INSERT INTO volunteers (telegram_id, username, full_name, city, phone, role, status, points)
-           VALUES (?,?,?,?,?,?,?,?)""",
-        COORDINATOR,
+        """INSERT INTO volunteers (telegram_id, username, full_name, city, phone, email, password_hash, role, status, points)
+           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+        (tg_id, username, name, city, phone, email, demo_pw, role, status, points),
     )
     coordinator_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
@@ -209,6 +210,7 @@ def main():
         vid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         volunteer_ids.append(vid)
     print(f"Создано {len(volunteer_ids)} волонтёров + 1 координатор")
+    print(f"  Демо-вход координатора: coordinator@example.com / demo123")
     print(f"  Демо-вход волонтёра: alisa@example.com / demo123")
 
     # Insert completed events
@@ -280,7 +282,7 @@ def main():
     print(f"\nБД создана: {DB_PATH}")
     print("Демо-данные загружены успешно!")
     print("\nДля запуска: python bot/main.py")
-    print("Координатор: admin123")
+    print("Координатор: coordinator@example.com / demo123")
     print("Волонтёр: alisa@example.com / demo123")
 
 

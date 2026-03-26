@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Lock, Loader2, AlertCircle, Mail, Shield, UserCheck } from 'lucide-react';
+import { Lock, Loader2, AlertCircle, Mail } from 'lucide-react';
 import api, { setToken, setUser } from '../api';
 
 export default function Login() {
-  const [mode, setMode] = useState('volunteer'); // 'volunteer' | 'coordinator'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -25,12 +24,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      let data;
-      if (mode === 'coordinator') {
-        data = await api.login(password);
-      } else {
-        data = await api.loginVolunteer({ email, password });
-      }
+      const data = await api.login({ email, password });
       setToken(data.token);
       setUser({ role: data.role, user_id: data.user_id, full_name: data.full_name });
       navigate('/');
@@ -60,48 +54,19 @@ export default function Login() {
             <p className="text-neutral-500 mt-1 text-sm">Вход в систему</p>
           </div>
 
-          {/* Mode toggle */}
-          <div className="flex gap-2 mb-6">
-            <button
-              type="button"
-              onClick={() => { setMode('volunteer'); setError(''); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                mode === 'volunteer'
-                  ? 'bg-primary-500 text-black shadow-md'
-                  : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'
-              }`}
-            >
-              <UserCheck size={15} />
-              Волонтёр
-            </button>
-            <button
-              type="button"
-              onClick={() => { setMode('coordinator'); setError(''); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                mode === 'coordinator'
-                  ? 'bg-primary-500 text-black shadow-md'
-                  : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'
-              }`}
-            >
-              <Shield size={15} />
-              Координатор
-            </button>
-          </div>
-
           <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'volunteer' && (
-              <div className="relative">
-                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email"
-                  required
-                  className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-xl text-sm placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all"
-                />
-              </div>
-            )}
+            <div className="relative">
+              <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                required
+                autoFocus
+                className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-xl text-sm placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all"
+              />
+            </div>
 
             <div className="relative">
               <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
@@ -109,9 +74,8 @@ export default function Login() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={mode === 'coordinator' ? 'Пароль координатора' : 'Пароль'}
+                placeholder="Пароль"
                 required
-                autoFocus
                 className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-xl text-sm placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all"
               />
             </div>
@@ -136,14 +100,12 @@ export default function Login() {
             </button>
           </form>
 
-          {mode === 'volunteer' && (
-            <p className="text-center text-sm text-neutral-500 mt-5">
-              Нет аккаунта?{' '}
-              <Link to="/register" className="text-primary-700 font-medium hover:text-primary-800">
-                Зарегистрироваться
-              </Link>
-            </p>
-          )}
+          <p className="text-center text-sm text-neutral-500 mt-5">
+            Нет аккаунта?{' '}
+            <Link to="/register" className="text-primary-700 font-medium hover:text-primary-800">
+              Зарегистрироваться
+            </Link>
+          </p>
 
           <Link
             to="/"

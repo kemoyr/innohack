@@ -93,17 +93,13 @@ def get_optional_user(authorization: str = Header(default="")):
 
 
 class LoginRequest(BaseModel):
+    email: str
     password: str
 
 
 class VolunteerRegisterRequest(BaseModel):
     full_name: str
     city: str = ""
-    email: str
-    password: str
-
-
-class VolunteerLoginRequest(BaseModel):
     email: str
     password: str
 
@@ -123,12 +119,24 @@ class WebAppAuthRequest(BaseModel):
 
 
 @router.post("/auth/login")
-async def login_coordinator(request: LoginRequest):
-    """Coordinator login with admin password."""
-    if request.password != settings.ADMIN_PASSWORD:
-        raise HTTPException(status_code=401, detail="Неверный пароль")
-    token = create_jwt_token(user_id=None, role="coordinator")
-    return {"token": token, "role": "coordinator", "user_id": None, "full_name": "Координатор"}
+async def login_user(request: LoginRequest):
+    """Unified login for volunteers and coordinators via email + password."""
+    from bot.database import get_volunteer_by_email
+
+    user = await get_volunteer_by_email(request.email)
+    if not user or not user.get("password_hash"):
+        raise HTTPException(status_code=401, detail="Неверный email или пароль")
+
+    if not verify_password(request.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Неверный email или пароль")
+
+    token = create_jwt_token(user_id=user["id"], role=user["role"])
+    return {
+        "token": token,
+        "role": user["role"],
+        "user_id": user["id"],
+        "full_name": user["full_name"],
+    }
 
 
 @router.post("/auth/register")
@@ -159,32 +167,14 @@ async def register_volunteer(request: VolunteerRegisterRequest):
 
 
 @router.post("/auth/login/volunteer")
-async def login_volunteer(request: VolunteerLoginRequest):
-    """Volunteer login with email + password."""
-    from bot.database import get_volunteer_by_email
-
-    volunteer = await get_volunteer_by_email(request.email)
-    if not volunteer or not volunteer.get("password_hash"):
-        raise HTTPException(status_code=401, detail="Неверный email или пароль")
-
-    if not verify_password(request.password, volunteer["password_hash"]):
-        raise HTTPException(status_code=401, detail="Неверный email или пароль")
-
-    token = create_jwt_token(user_id=volunteer["id"], role=volunteer["role"])
-    return {
-        "token": token,
-        "role": volunteer["role"],
-        "user_id": volunteer["id"],
-        "full_name": volunteer["full_name"],
-    }
+async def login_volunteer(request: LoginRequest):
+    """Backward-compatible alias for unified login."""
+    return await login_user(request)
 
 
 @router.get("/auth/me")
 async def get_me(user=Depends(get_current_user)):
     """Get current user profile."""
-    if user["role"] == "coordinator" and user["user_id"] is None:
-        return {"role": "coordinator", "full_name": "Координатор", "user_id": None}
-
     from bot.database import get_volunteer_by_id
     vol = await get_volunteer_by_id(user["user_id"])
     if not vol:
