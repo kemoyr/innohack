@@ -1,0 +1,87 @@
+import { NavLink, useNavigate } from 'react-router-dom';
+import { clearToken } from '../api';
+import { LayoutDashboard, Users, CalendarDays, Trophy, Settings, LogOut, Shield } from 'lucide-react';
+
+const navItems = [
+  { to: '/', label: 'Обзор', icon: LayoutDashboard },
+  { to: '/team', label: 'Команда', icon: Users },
+  { to: '/calendar', label: 'Календарь', icon: CalendarDays },
+  { to: '/ratings', label: 'Рейтинг', icon: Trophy },
+  { to: '/settings', label: 'Настройки', icon: Settings },
+];
+
+export default function Sidebar() {
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    clearToken();
+    navigate('/login');
+  }
+
+  return (
+    <aside className="fixed left-0 top-0 bottom-0 w-64 bg-slate-900 text-white flex flex-col z-50">
+      {/* Logo */}
+      <div className="px-6 py-6 border-b border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
+            <span className="text-white font-extrabold text-lg tracking-tight">V+</span>
+          </div>
+          <div>
+            <h1 className="text-lg font-bold tracking-tight text-white">
+              Volunteer<span className="text-primary-400">+</span>
+            </h1>
+            <p className="text-xs text-slate-500">Панель координатора</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-4 space-y-1">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  isActive
+                    ? 'bg-primary-600/20 text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`
+              }
+            >
+              <Icon size={18} strokeWidth={2} />
+              <span>{item.label}</span>
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      {/* User info */}
+      <div className="px-4 py-3 mx-3 mb-2 rounded-lg bg-slate-800/60">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-primary-600/30 rounded-full flex items-center justify-center">
+            <Shield size={14} className="text-primary-400" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-300 truncate">Администратор</p>
+            <p className="text-xs text-slate-500">Координатор</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Divider & Logout */}
+      <div className="px-3 py-3 border-t border-slate-800">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 w-full"
+        >
+          <LogOut size={18} strokeWidth={2} />
+          <span>Выйти</span>
+        </button>
+      </div>
+    </aside>
+  );
+}
