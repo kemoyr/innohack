@@ -1,4 +1,6 @@
+import hashlib
 import os
+import uuid
 from datetime import datetime, timedelta
 
 import aiosqlite
@@ -117,7 +119,149 @@ async def init_db():
                 await db.execute(f"ALTER TABLE {table} ADD COLUMN {col} TEXT DEFAULT {default}")
             except Exception:
                 pass
+
+        # Auto-seed demo data if DB is empty
+        cursor = await db.execute("SELECT COUNT(*) FROM volunteers")
+        count = (await cursor.fetchone())[0]
+        if count == 0:
+            await _seed_demo_data(db)
+
         await db.commit()
+
+
+def _hash_pw(password: str) -> str:
+    salt = os.urandom(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
+    return salt.hex() + ":" + dk.hex()
+
+
+async def _seed_demo_data(db):
+    """Insert demo volunteers, events, submissions, achievements."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("Database is empty — seeding demo data...")
+
+    pw = _hash_pw("demo123")
+
+    # Coordinator
+    await db.execute(
+        """INSERT INTO volunteers (telegram_id, username, full_name, city, phone, email, password_hash, role, status, points)
+           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+        (200001, "coordinator_main", "Мария Координаторова", "Москва", "+79000000001",
+         "coordinator@example.com", pw, "coordinator", "active", 0),
+    )
+
+    # Volunteers
+    volunteers = [
+        (100001, "alisa_iv", "Алиса Иванова", "Москва", "+79001111111", "alisa@example.com", "volunteer", "active", 350),
+        (100002, "boris_p", "Борис Петров", "Санкт-Петербург", "+79002222222", "boris@example.com", "volunteer", "active", 280),
+        (100003, "vika_s", "Виктория Сидорова", "Казань", "+79003333333", "vika@example.com", "volunteer", "active", 220),
+        (100004, "grigory_k", "Григорий Козлов", "Новосибирск", "+79004444444", "grigory@example.com", "volunteer", "active", 190),
+        (100005, "darya_n", "Дарья Новикова", "Екатеринбург", "+79005555555", "darya@example.com", "volunteer", "active", 150),
+        (100006, "evgeny_m", "Евгений Морозов", "Москва", "+79006666666", "evgeny@example.com", "volunteer", "active", 120),
+        (100007, "zhanna_v", "Жанна Волкова", "Санкт-Петербург", "+79007777777", "zhanna@example.com", "volunteer", "active", 80),
+        (100008, "zahar_l", "Захар Лебедев", "Казань", "+79008888888", "zahar@example.com", "volunteer", "inactive", 50),
+        (100009, "irina_s", "Ирина Соколова", "Новосибирск", "+79009999999", "irina@example.com", "volunteer", "active", 30),
+        (100010, "kirill_p", "Кирилл Попов", "Екатеринбург", "+79001010101", "kirill@example.com", "volunteer", "active", 10),
+    ]
+    for tg_id, username, name, city, phone, email, role, status, points in volunteers:
+        await db.execute(
+            """INSERT INTO volunteers (telegram_id, username, full_name, city, phone, email, password_hash, role, status, points)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (tg_id, username, name, city, phone, email, pw, role, status, points),
+        )
+
+    # Completed events (coordinator_id=1)
+    completed_events = [
+        ("Лекция по программированию", "Введение в Python для школьников", "Школа №42, Москва", 55.7558, 37.6173, "2026-03-20", "completed", 25),
+        ("Мастер-класс по робототехнике", "Основы Arduino", "Библиотека им. Ленина, СПб", 59.9343, 30.3351, "2026-03-18", "completed", 15),
+        ("Воркшоп по дизайну", "Figma для начинающих", "Технопарк, Казань", 55.7887, 49.1221, "2026-03-15", "completed", 30),
+        ("Лекция по экологии", "Раздельный сбор мусора", "ДК Молодёжи, Новосибирск", 55.0084, 82.9357, "2026-03-12", "completed", 20),
+        ("Фестиваль науки", "Физика в повседневной жизни", "Уральский ТЦ, Екатеринбург", 56.8389, 60.6057, "2026-03-10", "completed", 50),
+    ]
+    event_ids = []
+    for title, desc, loc, lat, lon, date, status, attendance in completed_events:
+        qr = f"EVT-{uuid.uuid4().hex[:8].upper()}"
+        await db.execute(
+            """INSERT INTO events (title, description, location_name, location_lat, location_lon,
+                                   scheduled_date, status, qr_code, coordinator_id, attendance_count)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (title, desc, loc, lat, lon, date, status, qr, 1, attendance),
+        )
+        cursor = await db.execute("SELECT last_insert_rowid()")
+        event_ids.append((await cursor.fetchone())[0])
+
+    # Planned events
+    planned_events = [
+        ("Хакатон для школьников", "24-часовой хакатон по разработке приложений", "Технопарк, Москва", 55.7558, 37.6173, "2026-04-05", "planned", 0),
+        ("Лекция по ИИ", "Как работает ChatGPT", "IT-парк, Санкт-Петербург", 59.9343, 30.3351, "2026-04-10", "planned", 0),
+        ("Мастер-класс по 3D-печати", "Создаём первую модель", "FabLab, Казань", 55.7887, 49.1221, "2026-04-15", "planned", 0),
+    ]
+    for title, desc, loc, lat, lon, date, status, attendance in planned_events:
+        qr = f"EVT-{uuid.uuid4().hex[:8].upper()}"
+        await db.execute(
+            """INSERT INTO events (title, description, location_name, location_lat, location_lon,
+                                   scheduled_date, status, qr_code, coordinator_id, attendance_count)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (title, desc, loc, lat, lon, date, status, qr, 1, attendance),
+        )
+
+    # Submissions + points (volunteer IDs start at 2)
+    submissions = [
+        (0,0,50),(0,1,50),(0,2,50),(0,3,50),(0,4,50),(0,0,50),(0,1,50),
+        (1,0,56),(1,1,56),(1,2,56),(1,3,56),(1,4,56),
+        (2,2,55),(2,3,55),(2,4,55),(2,0,55),
+        (3,3,65),(3,4,65),(3,0,60),
+        (4,4,50),(4,0,50),(4,1,50),
+        (5,0,60),(5,1,60),
+        (6,1,80),
+        (7,2,50),
+        (8,3,30),
+        (9,4,10),
+    ]
+    for vol_idx, evt_idx, points in submissions:
+        vid = vol_idx + 2  # volunteers start at id=2
+        eid = event_ids[evt_idx]
+        cursor = await db.execute("SELECT qr_code, location_lat, location_lon FROM events WHERE id = ?", (eid,))
+        evt = await cursor.fetchone()
+        await db.execute(
+            """INSERT INTO submissions
+               (volunteer_id, event_id, location_lat, location_lon, photo_count,
+                selfie_verified, geo_verified, exif_verified, qr_verified,
+                qr_code, points_awarded, status)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (vid, eid, evt[1], evt[2], 3, 1, 1, 1, 1, evt[0], points, "verified"),
+        )
+        cursor = await db.execute("SELECT last_insert_rowid()")
+        sub_id = (await cursor.fetchone())[0]
+        await db.execute(
+            "INSERT INTO points_history (volunteer_id, amount, reason, submission_id) VALUES (?,?,?,?)",
+            (vid, points, f"Верификация мероприятия #{eid}", sub_id),
+        )
+
+    # Achievements
+    achievements = [
+        (0, "first_event", "Первая лекция", "Провела первое мероприятие"),
+        (0, "marathon", "Марафонец", "5+ мероприятий проведено"),
+        (0, "ambassador", "Амбассадор", "Самый активный волонтёр месяца"),
+        (1, "first_event", "Первая лекция", "Провёл первое мероприятие"),
+        (1, "star", "Звезда сцены", "Самая большая аудитория — 50 человек"),
+        (2, "first_event", "Первая лекция", "Провела первое мероприятие"),
+        (2, "multicity", "Мультигород", "Мероприятия в разных городах"),
+        (3, "first_event", "Первая лекция", "Провёл первое мероприятие"),
+        (4, "first_event", "Первая лекция", "Провела первое мероприятие"),
+        (5, "first_event", "Первая лекция", "Провёл первое мероприятие"),
+    ]
+    for vol_idx, badge, title, desc in achievements:
+        vid = vol_idx + 2
+        await db.execute(
+            "INSERT INTO achievements (volunteer_id, badge_type, title, description) VALUES (?,?,?,?)",
+            (vid, badge, title, desc),
+        )
+
+    logger.info("Demo data seeded: 1 coordinator + 10 volunteers, 8 events, 28 submissions, 10 achievements")
+    logger.info("Coordinator: coordinator@example.com / demo123")
+    logger.info("Volunteer: alisa@example.com / demo123")
 
 
 async def get_db():
