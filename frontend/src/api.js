@@ -10,6 +10,16 @@ export function setToken(token) {
 
 export function clearToken() {
   localStorage.removeItem('volunteer_plus_token');
+  localStorage.removeItem('volunteer_plus_user');
+}
+
+export function getUser() {
+  const raw = localStorage.getItem('volunteer_plus_user');
+  return raw ? JSON.parse(raw) : null;
+}
+
+export function setUser(user) {
+  localStorage.setItem('volunteer_plus_user', JSON.stringify(user));
 }
 
 function authHeaders() {
@@ -46,19 +56,77 @@ async function request(method, path, body = null) {
   return res.json();
 }
 
+async function publicRequest(method, path, body = null) {
+  const options = { method, headers: { 'Content-Type': 'application/json' } };
+  const token = getToken();
+  if (token) {
+    options.headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+  const res = await fetch(`${API_BASE}${path}`, options);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+async function uploadRequest(method, path, formData) {
+  const token = getToken();
+  const headers = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers,
+    body: formData,
+  });
+  if (res.status === 401) {
+    clearToken();
+    window.location.href = '/login';
+    throw new Error('Unauthorized');
+  }
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 const api = {
-  login: (password) => request('POST', '/api/auth/login', { password }),
+  // Auth
+  login: (password) => publicRequest('POST', '/api/auth/login', { password }),
+  register: (data) => publicRequest('POST', '/api/auth/register', data),
+  loginVolunteer: (data) => publicRequest('POST', '/api/auth/login/volunteer', data),
+  getMe: () => request('GET', '/api/auth/me'),
+
+  // Public
+  getEvents: () => publicRequest('GET', '/api/events'),
+  getStats: () => publicRequest('GET', '/api/stats'),
+  getLeaderboard: () => publicRequest('GET', '/api/leaderboard'),
+  getAchievements: () => publicRequest('GET', '/api/achievements'),
+  getActivity: () => publicRequest('GET', '/api/activity'),
+  getChartData: () => publicRequest('GET', '/api/stats/charts'),
+
+  // Authenticated
   getVolunteers: () => request('GET', '/api/volunteers'),
   getVolunteer: (id) => request('GET', `/api/volunteers/${id}`),
-  getEvents: () => request('GET', '/api/events'),
   createEvent: (data) => request('POST', '/api/events', data),
   updateEvent: (id, data) => request('PATCH', `/api/events/${id}`, data),
-  getStats: () => request('GET', '/api/stats'),
-  getLeaderboard: () => request('GET', '/api/leaderboard'),
-  getAchievements: () => request('GET', '/api/achievements'),
-  getActivity: () => request('GET', '/api/activity'),
-  getChartData: () => request('GET', '/api/stats/charts'),
   toggleVolunteerStatus: (id) => request('PATCH', `/api/volunteers/${id}/status`),
+
+  // Volunteer events
+  getMyEvents: () => request('GET', '/api/events/my/list'),
+  uploadVerification: (eventId, formData) => uploadRequest('POST', `/api/events/${eventId}/verify`, formData),
+  getVerification: (eventId) => request('GET', `/api/events/${eventId}/verification`),
+
+  // Moderation (coordinator)
+  getModerationQueue: () => request('GET', '/api/moderation/queue'),
+  getModerationHistory: () => request('GET', '/api/moderation/history'),
+  moderateEvent: (eventId, data) => request('POST', `/api/moderation/${eventId}/decide`, data),
 };
 
 export default api;

@@ -1,12 +1,13 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { clearToken } from '../api';
-import { LayoutDashboard, Users, CalendarDays, Trophy, Settings, LogOut, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, CalendarDays, Trophy, Settings, LogOut, Shield, ShieldCheck } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'Обзор', icon: LayoutDashboard },
   { to: '/team', label: 'Команда', icon: Users },
   { to: '/calendar', label: 'Календарь', icon: CalendarDays },
   { to: '/ratings', label: 'Рейтинг', icon: Trophy },
+  { to: '/moderation', label: 'Модерация', icon: ShieldCheck },
   { to: '/settings', label: 'Настройки', icon: Settings },
 ];
 
@@ -77,7 +78,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Divider & Logout */}
+      {/* Logout */}
       <div className="px-3 py-3 border-t border-white/10">
         <button
           onClick={handleLogout}

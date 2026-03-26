@@ -5,11 +5,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from bot.api.routes import auth, volunteers, events, stats
+from bot.api.routes import auth, volunteers, events, stats, verification
 
 
 def create_app(bot=None) -> FastAPI:
-    app = FastAPI(title="Волонтёр+ API")
+    app = FastAPI(title="Volunteer+ API")
 
     app.add_middleware(
         CORSMiddleware,
@@ -26,6 +26,7 @@ def create_app(bot=None) -> FastAPI:
     app.include_router(volunteers.router, prefix="/api")
     app.include_router(events.router, prefix="/api")
     app.include_router(stats.router, prefix="/api")
+    app.include_router(verification.router, prefix="/api")
 
     # Serve frontend static files
     frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"

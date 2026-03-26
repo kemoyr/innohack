@@ -1,6 +1,12 @@
 import { Clock, CheckCircle2, XCircle, MapPin, CalendarDays, Users } from 'lucide-react';
 
 const statusConfig = {
+  pending: {
+    icon: Clock,
+    label: 'На проверке',
+    badgeClass: 'bg-amber-100 text-amber-800 border border-amber-300/50',
+    iconClass: 'text-amber-600',
+  },
   planned: {
     icon: Clock,
     label: 'Ожидается',

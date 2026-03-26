@@ -15,11 +15,13 @@ async def init_db():
             """
             CREATE TABLE IF NOT EXISTS volunteers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                telegram_id INTEGER UNIQUE NOT NULL,
+                telegram_id INTEGER UNIQUE,
                 username TEXT DEFAULT '',
                 full_name TEXT NOT NULL,
                 city TEXT DEFAULT '',
                 phone TEXT DEFAULT '',
+                email TEXT UNIQUE,
+                password_hash TEXT DEFAULT '',
                 role TEXT DEFAULT 'volunteer' CHECK(role IN ('volunteer', 'coordinator')),
                 status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
                 points INTEGER DEFAULT 0,
@@ -34,10 +36,27 @@ async def init_db():
                 location_lat REAL,
                 location_lon REAL,
                 scheduled_date TEXT,
-                status TEXT DEFAULT 'planned' CHECK(status IN ('planned', 'completed', 'cancelled')),
+                status TEXT DEFAULT 'planned' CHECK(status IN ('pending', 'planned', 'completed', 'cancelled', 'rejected')),
                 qr_code TEXT UNIQUE,
                 coordinator_id INTEGER REFERENCES volunteers(id),
+                created_by INTEGER REFERENCES volunteers(id),
+                moderation_note TEXT DEFAULT '',
                 attendance_count INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE IF NOT EXISTS event_verifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL REFERENCES events(id),
+                volunteer_id INTEGER NOT NULL REFERENCES volunteers(id),
+                photo_paths TEXT DEFAULT '[]',
+                location_lat REAL,
+                location_lon REAL,
+                ai_score REAL DEFAULT 0,
+                ai_approved INTEGER DEFAULT 0,
+                ai_reasons TEXT DEFAULT '[]',
+                coordinator_decision TEXT DEFAULT '' CHECK(coordinator_decision IN ('', 'approved', 'rejected')),
+                coordinator_comment TEXT DEFAULT '',
                 created_at TEXT DEFAULT (datetime('now'))
             );
 
@@ -78,13 +97,26 @@ async def init_db():
             );
 
             CREATE INDEX IF NOT EXISTS idx_volunteers_telegram_id ON volunteers(telegram_id);
+            CREATE INDEX IF NOT EXISTS idx_volunteers_email ON volunteers(email);
             CREATE INDEX IF NOT EXISTS idx_submissions_volunteer_id ON submissions(volunteer_id);
             CREATE INDEX IF NOT EXISTS idx_submissions_event_id ON submissions(event_id);
             CREATE INDEX IF NOT EXISTS idx_events_qr_code ON events(qr_code);
             CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
+            CREATE INDEX IF NOT EXISTS idx_events_created_by ON events(created_by);
+            CREATE INDEX IF NOT EXISTS idx_event_verifications_event_id ON event_verifications(event_id);
             CREATE INDEX IF NOT EXISTS idx_points_history_volunteer_id ON points_history(volunteer_id);
             """
         )
+        # Migration: add columns if missing (for existing DBs)
+        for col, default in [
+            ("email", "NULL"), ("password_hash", "''"),
+            ("created_by", "NULL"), ("moderation_note", "''"),
+        ]:
+            try:
+                table = "volunteers" if col in ("email", "password_hash") else "events"
+                await db.execute(f"ALTER TABLE {table} ADD COLUMN {col} TEXT DEFAULT {default}")
+            except Exception:
+                pass
         await db.commit()
 
 
@@ -113,19 +145,41 @@ async def get_volunteer(telegram_id: int):
         return _row_to_dict(row)
 
 
+async def get_volunteer_by_id(volunteer_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM volunteers WHERE id = ?", (volunteer_id,)
+        )
+        row = await cursor.fetchone()
+        return _row_to_dict(row)
+
+
+async def get_volunteer_by_email(email: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM volunteers WHERE email = ?", (email,)
+        )
+        row = await cursor.fetchone()
+        return _row_to_dict(row)
+
+
 async def create_volunteer(
-    telegram_id: int,
-    username: str,
-    full_name: str,
+    telegram_id=None,
+    username: str = "",
+    full_name: str = "",
     city: str = "",
     phone: str = "",
     role: str = "volunteer",
+    email: str = None,
+    password_hash: str = "",
 ):
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
-            """INSERT INTO volunteers (telegram_id, username, full_name, city, phone, role)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (telegram_id, username, full_name, city, phone, role),
+            """INSERT INTO volunteers (telegram_id, username, full_name, city, phone, role, email, password_hash)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (telegram_id, username, full_name, city, phone, role, email, password_hash),
         )
         await db.commit()
         return cursor.lastrowid
@@ -171,16 +225,27 @@ async def create_event(
     scheduled_date: str = "",
     qr_code: str = "",
     coordinator_id=None,
+    created_by=None,
+    status: str = "planned",
 ):
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
             """INSERT INTO events (title, description, location_name, location_lat, location_lon,
-                                   scheduled_date, qr_code, coordinator_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (title, description, location_name, lat, lon, scheduled_date, qr_code, coordinator_id),
+                                   scheduled_date, qr_code, coordinator_id, created_by, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (title, description, location_name, lat, lon, scheduled_date,
+             qr_code or None, coordinator_id, created_by, status),
         )
         await db.commit()
         return cursor.lastrowid
+
+
+async def get_event_by_id(event_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM events WHERE id = ?", (event_id,))
+        row = await cursor.fetchone()
+        return _row_to_dict(row)
 
 
 async def get_event_by_qr(qr_code: str):
@@ -197,6 +262,38 @@ async def get_all_events():
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute("SELECT * FROM events ORDER BY created_at DESC")
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+
+
+async def get_public_events():
+    """Events visible to public (not pending/rejected)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM events WHERE status IN ('planned', 'completed', 'cancelled') ORDER BY created_at DESC"
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+
+
+async def get_pending_events():
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM events WHERE status = 'pending' ORDER BY created_at DESC"
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+
+
+async def get_events_by_creator(volunteer_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM events WHERE created_by = ? ORDER BY created_at DESC",
+            (volunteer_id,),
+        )
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
 
@@ -230,22 +327,97 @@ async def update_event_status(event_id: int, status: str, attendance_count: int 
         await db.commit()
 
 
+async def moderate_event(event_id: int, status: str, note: str = ""):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE events SET status = ?, moderation_note = ? WHERE id = ?",
+            (status, note, event_id),
+        )
+        await db.commit()
+
+
+# ── Event Verifications ──────────
+
+
+async def create_event_verification(
+    event_id: int, volunteer_id: int, photo_paths: str = "[]",
+    lat=None, lon=None, ai_score: float = 0, ai_approved: int = 0, ai_reasons: str = "[]",
+):
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            """INSERT INTO event_verifications
+               (event_id, volunteer_id, photo_paths, location_lat, location_lon,
+                ai_score, ai_approved, ai_reasons)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (event_id, volunteer_id, photo_paths, lat, lon, ai_score, ai_approved, ai_reasons),
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+
+async def get_event_verification(event_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM event_verifications WHERE event_id = ? ORDER BY created_at DESC LIMIT 1",
+            (event_id,),
+        )
+        row = await cursor.fetchone()
+        return _row_to_dict(row)
+
+
+async def get_pending_verifications():
+    """Get all verifications for pending events needing coordinator review."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """SELECT ev.*, e.title as event_title, e.status as event_status,
+                      e.scheduled_date, e.location_name, v.full_name as volunteer_name
+               FROM event_verifications ev
+               JOIN events e ON ev.event_id = e.id
+               JOIN volunteers v ON ev.volunteer_id = v.id
+               WHERE e.status = 'pending' AND ev.ai_approved = 0
+                     AND ev.coordinator_decision = ''
+               ORDER BY ev.created_at DESC"""
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+
+
+async def get_all_verifications():
+    """Full moderation history."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """SELECT ev.*, e.title as event_title, e.status as event_status,
+                      e.scheduled_date, e.location_name, v.full_name as volunteer_name
+               FROM event_verifications ev
+               JOIN events e ON ev.event_id = e.id
+               JOIN volunteers v ON ev.volunteer_id = v.id
+               ORDER BY ev.created_at DESC"""
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+
+
+async def update_verification_decision(verification_id: int, decision: str, comment: str = ""):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE event_verifications SET coordinator_decision = ?, coordinator_comment = ? WHERE id = ?",
+            (decision, comment, verification_id),
+        )
+        await db.commit()
+
+
 # ── Submissions ───────────────────
 
 
 async def create_submission(
-    volunteer_id: int,
-    event_id,
-    lat,
-    lon,
-    photo_count: int = 0,
-    selfie_verified: int = 0,
-    geo_verified: int = 0,
-    exif_verified: int = 0,
-    qr_verified: int = 0,
-    qr_code: str = "",
-    points_awarded: int = 0,
-    status: str = "pending",
+    volunteer_id: int, event_id=None, lat=None, lon=None,
+    photo_count: int = 0, selfie_verified: int = 0,
+    geo_verified: int = 0, exif_verified: int = 0,
+    qr_verified: int = 0, qr_code: str = "",
+    points_awarded: int = 0, status: str = "pending",
     rejection_reason: str = "",
 ):
     async with aiosqlite.connect(DB_PATH) as db:
@@ -255,11 +427,9 @@ async def create_submission(
                 selfie_verified, geo_verified, exif_verified, qr_verified,
                 qr_code, points_awarded, status, rejection_reason)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                volunteer_id, event_id, lat, lon, photo_count,
-                selfie_verified, geo_verified, exif_verified, qr_verified,
-                qr_code, points_awarded, status, rejection_reason,
-            ),
+            (volunteer_id, event_id, lat, lon, photo_count,
+             selfie_verified, geo_verified, exif_verified, qr_verified,
+             qr_code, points_awarded, status, rejection_reason),
         )
         await db.commit()
         return cursor.lastrowid
@@ -325,7 +495,7 @@ async def get_stats():
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
 
-        cursor = await db.execute("SELECT COUNT(*) as cnt FROM events")
+        cursor = await db.execute("SELECT COUNT(*) as cnt FROM events WHERE status != 'pending'")
         total_events = (await cursor.fetchone())["cnt"]
 
         cursor = await db.execute(
@@ -338,24 +508,27 @@ async def get_stats():
         month_start = now.strftime("%Y-%m-01")
 
         cursor = await db.execute(
-            "SELECT COUNT(*) as cnt FROM events WHERE scheduled_date >= ?",
+            "SELECT COUNT(*) as cnt FROM events WHERE scheduled_date >= ? AND status != 'pending'",
             (week_start,),
         )
         this_week_events = (await cursor.fetchone())["cnt"]
 
         cursor = await db.execute(
-            "SELECT COUNT(*) as cnt FROM events WHERE scheduled_date >= ?",
+            "SELECT COUNT(*) as cnt FROM events WHERE scheduled_date >= ? AND status != 'pending'",
             (month_start,),
         )
         this_month_events = (await cursor.fetchone())["cnt"]
 
-        cursor = await db.execute("SELECT COUNT(*) as cnt FROM volunteers")
+        cursor = await db.execute("SELECT COUNT(*) as cnt FROM volunteers WHERE role = 'volunteer'")
         total_volunteers = (await cursor.fetchone())["cnt"]
 
         cursor = await db.execute(
-            "SELECT COUNT(*) as cnt FROM volunteers WHERE status = 'active'"
+            "SELECT COUNT(*) as cnt FROM volunteers WHERE status = 'active' AND role = 'volunteer'"
         )
         active_volunteers = (await cursor.fetchone())["cnt"]
+
+        cursor = await db.execute("SELECT COUNT(*) as cnt FROM events WHERE status = 'pending'")
+        pending_events = (await cursor.fetchone())["cnt"]
 
     return {
         "total_events": total_events,
@@ -364,6 +537,7 @@ async def get_stats():
         "this_month_events": this_month_events,
         "total_volunteers": total_volunteers,
         "active_volunteers": active_volunteers,
+        "pending_events": pending_events,
     }
 
 
@@ -371,7 +545,6 @@ async def get_stats():
 
 
 async def mark_qr_used(qr_code: str, volunteer_id: int) -> bool:
-    """Return True if QR was already used by this volunteer (i.e. duplicate)."""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(
@@ -386,7 +559,6 @@ async def mark_qr_used(qr_code: str, volunteer_id: int) -> bool:
 
 
 async def toggle_volunteer_status(volunteer_id: int):
-    """Toggle volunteer status between active and inactive. Returns new status."""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(
@@ -408,7 +580,6 @@ async def toggle_volunteer_status(volunteer_id: int):
 
 
 async def get_recent_submissions(limit: int = 20):
-    """Get recent submissions with volunteer and event info."""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(
@@ -427,7 +598,6 @@ async def get_recent_submissions(limit: int = 20):
 
 
 async def get_recent_achievements(limit: int = 10):
-    """Get recent achievements with volunteer info."""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(

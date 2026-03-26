@@ -3,12 +3,11 @@ from pydantic import BaseModel
 from typing import Optional
 
 from bot.database import (
-    get_all_events,
-    create_event,
-    update_event_status,
-    get_all_volunteers,
+    get_all_events, get_public_events, get_pending_events,
+    create_event, update_event_status, get_all_volunteers,
+    get_event_by_id,
 )
-from bot.api.routes.auth import get_current_coordinator
+from bot.api.routes.auth import get_current_coordinator, get_current_user, get_optional_user
 from bot.utils.qr import generate_event_code
 
 router = APIRouter(tags=["events"])
@@ -29,8 +28,13 @@ class EventUpdate(BaseModel):
 
 
 @router.get("/events")
-async def list_events():
-    events = await get_all_events()
+async def list_events(user=Depends(get_optional_user)):
+    """List events. Public users see only published events. Coordinators see all."""
+    if user and user["role"] == "coordinator":
+        events = await get_all_events()
+    else:
+        events = await get_public_events()
+
     volunteers = await get_all_volunteers()
     vol_map = {v["id"]: v["full_name"] for v in volunteers}
 
@@ -38,28 +42,60 @@ async def list_events():
     for ev in events:
         result.append({
             **ev,
-            "coordinator_name": vol_map.get(ev["coordinator_id"], "—"),
+            "coordinator_name": vol_map.get(ev.get("coordinator_id"), "—"),
+            "creator_name": vol_map.get(ev.get("created_by"), "—"),
         })
     return result
+
+
+@router.get("/events/pending")
+async def list_pending_events(coordinator=Depends(get_current_coordinator)):
+    """Coordinator: list all pending events."""
+    return await get_pending_events()
+
+
+@router.get("/events/{event_id}")
+async def get_event(event_id: int):
+    """Get single event detail (public)."""
+    event = await get_event_by_id(event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Мероприятие не найдено")
+    return event
 
 
 @router.post("/events")
 async def create_new_event(
     event: EventCreate,
-    coordinator=Depends(get_current_coordinator),
+    user=Depends(get_current_user),
 ):
-    code = generate_event_code()
-    event_id = await create_event(
-        title=event.title,
-        description=event.description,
-        location_name=event.location_name,
-        lat=event.location_lat,
-        lon=event.location_lon,
-        scheduled_date=event.scheduled_date,
-        qr_code=code,
-        coordinator_id=None,
-    )
-    return {"id": event_id, "qr_code": code}
+    """Create event. Coordinators create planned events directly. Volunteers create pending ones."""
+    if user["role"] == "coordinator":
+        code = generate_event_code()
+        event_id = await create_event(
+            title=event.title,
+            description=event.description,
+            location_name=event.location_name,
+            lat=event.location_lat,
+            lon=event.location_lon,
+            scheduled_date=event.scheduled_date,
+            qr_code=code,
+            coordinator_id=None,
+            status="planned",
+        )
+        return {"id": event_id, "qr_code": code, "status": "planned"}
+    else:
+        # Volunteer creates pending event
+        event_id = await create_event(
+            title=event.title,
+            description=event.description,
+            location_name=event.location_name,
+            lat=event.location_lat,
+            lon=event.location_lon,
+            scheduled_date=event.scheduled_date,
+            created_by=user["user_id"],
+            status="pending",
+        )
+        return {"id": event_id, "status": "pending"}
 
 
 @router.patch("/events/{event_id}")

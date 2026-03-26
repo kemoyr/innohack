@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Lock, Loader2, AlertCircle } from 'lucide-react';
-import api, { setToken } from '../api';
+import { Link, useNavigate } from 'react-router-dom';
+import { Lock, Loader2, AlertCircle, Mail, Shield, UserCheck } from 'lucide-react';
+import api, { setToken, setUser } from '../api';
 
 export default function Login() {
+  const [mode, setMode] = useState('volunteer'); // 'volunteer' | 'coordinator'
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,11 +25,17 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const data = await api.login(password);
+      let data;
+      if (mode === 'coordinator') {
+        data = await api.login(password);
+      } else {
+        data = await api.loginVolunteer({ email, password });
+      }
       setToken(data.token);
+      setUser({ role: data.role, user_id: data.user_id, full_name: data.full_name });
       navigate('/');
-    } catch {
-      setError('Неверный пароль. Попробуйте снова.');
+    } catch (err) {
+      setError(err.message || 'Ошибка входа');
     } finally {
       setLoading(false);
     }
@@ -35,51 +43,77 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bee-black px-4">
-      {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary-500/8 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-primary-500/5 rounded-full blur-3xl" />
-        {/* Beeline diagonal stripes */}
         <div className="absolute top-0 left-0 w-full h-2 bg-primary-500" />
       </div>
 
       <div className="relative w-full max-w-sm">
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          {/* Logo */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-primary-500 rounded-2xl mb-4 shadow-lg shadow-primary-500/30">
               <span className="text-black font-extrabold text-xl">V+</span>
             </div>
             <h1 className="text-2xl font-bold text-neutral-900">
               Volunteer<span className="text-primary-500">+</span>
             </h1>
-            <p className="text-neutral-500 mt-1 text-sm">Панель координатора</p>
+            <p className="text-neutral-500 mt-1 text-sm">Вход в систему</p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-neutral-700 mb-2"
-              >
-                Пароль доступа
-              </label>
+          {/* Mode toggle */}
+          <div className="flex gap-2 mb-6">
+            <button
+              type="button"
+              onClick={() => { setMode('volunteer'); setError(''); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                mode === 'volunteer'
+                  ? 'bg-primary-500 text-black shadow-md'
+                  : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'
+              }`}
+            >
+              <UserCheck size={15} />
+              Волонтёр
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('coordinator'); setError(''); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                mode === 'coordinator'
+                  ? 'bg-primary-500 text-black shadow-md'
+                  : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'
+              }`}
+            >
+              <Shield size={15} />
+              Координатор
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'volunteer' && (
               <div className="relative">
-                <div className="absolute left-3.5 top-1/2 -translate-y-1/2">
-                  <Lock size={16} className="text-neutral-400" />
-                </div>
+                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
                 <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Введите пароль..."
-                  className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-xl text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all duration-200 text-sm"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
                   required
-                  autoFocus
+                  className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-xl text-sm placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all"
                 />
               </div>
+            )}
+
+            <div className="relative">
+              <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={mode === 'coordinator' ? 'Пароль координатора' : 'Пароль'}
+                required
+                autoFocus
+                className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-xl text-sm placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all"
+              />
             </div>
 
             {error && (
@@ -92,23 +126,34 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-6 bg-primary-500 text-black font-bold rounded-xl shadow-lg shadow-primary-500/30 hover:bg-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="w-full py-3 bg-primary-500 text-black font-bold rounded-xl shadow-lg shadow-primary-500/30 hover:bg-primary-400 transition-all disabled:opacity-50 text-sm"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Вход...
+                  <Loader2 className="h-4 w-4 animate-spin" /> Вход...
                 </span>
-              ) : (
-                'Войти'
-              )}
+              ) : 'Войти'}
             </button>
           </form>
+
+          {mode === 'volunteer' && (
+            <p className="text-center text-sm text-neutral-500 mt-5">
+              Нет аккаунта?{' '}
+              <Link to="/register" className="text-primary-700 font-medium hover:text-primary-800">
+                Зарегистрироваться
+              </Link>
+            </p>
+          )}
+
+          <Link
+            to="/"
+            className="block text-center text-xs text-neutral-400 mt-4 hover:text-neutral-600 transition-colors"
+          >
+            Смотреть без регистрации
+          </Link>
         </div>
 
-        <p className="text-center text-neutral-600 text-xs mt-6">
-          Volunteer+ 2026
-        </p>
+        <p className="text-center text-neutral-600 text-xs mt-6">Volunteer+ 2026</p>
       </div>
     </div>
   );

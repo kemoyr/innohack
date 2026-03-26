@@ -1,7 +1,6 @@
 """
-Seed script for Волонтёр+ demo data.
-Creates 10 volunteers, 8 events (5 completed + 3 planned),
-submissions, points history, and achievements.
+Seed script for Volunteer+ demo data.
+Creates volunteers, coordinator, events, submissions, achievements.
 
 Run: python demo_data.py
 """
@@ -9,17 +8,20 @@ Run: python demo_data.py
 import os
 import sqlite3
 import uuid
+import hashlib
 
 DB_PATH = os.getenv("DB_PATH", "data/volunteer.db")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS volunteers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    telegram_id INTEGER UNIQUE NOT NULL,
+    telegram_id INTEGER UNIQUE,
     username TEXT DEFAULT '',
     full_name TEXT NOT NULL,
     city TEXT DEFAULT '',
     phone TEXT DEFAULT '',
+    email TEXT UNIQUE,
+    password_hash TEXT DEFAULT '',
     role TEXT DEFAULT 'volunteer' CHECK(role IN ('volunteer', 'coordinator')),
     status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
     points INTEGER DEFAULT 0,
@@ -34,10 +36,27 @@ CREATE TABLE IF NOT EXISTS events (
     location_lat REAL,
     location_lon REAL,
     scheduled_date TEXT,
-    status TEXT DEFAULT 'planned' CHECK(status IN ('planned', 'completed', 'cancelled')),
+    status TEXT DEFAULT 'planned' CHECK(status IN ('pending', 'planned', 'completed', 'cancelled', 'rejected')),
     qr_code TEXT UNIQUE,
     coordinator_id INTEGER REFERENCES volunteers(id),
+    created_by INTEGER REFERENCES volunteers(id),
+    moderation_note TEXT DEFAULT '',
     attendance_count INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS event_verifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL REFERENCES events(id),
+    volunteer_id INTEGER NOT NULL REFERENCES volunteers(id),
+    photo_paths TEXT DEFAULT '[]',
+    location_lat REAL,
+    location_lon REAL,
+    ai_score REAL DEFAULT 0,
+    ai_approved INTEGER DEFAULT 0,
+    ai_reasons TEXT DEFAULT '[]',
+    coordinator_decision TEXT DEFAULT '' CHECK(coordinator_decision IN ('', 'approved', 'rejected')),
+    coordinator_comment TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -78,27 +97,36 @@ CREATE TABLE IF NOT EXISTS points_history (
 );
 
 CREATE INDEX IF NOT EXISTS idx_volunteers_telegram_id ON volunteers(telegram_id);
+CREATE INDEX IF NOT EXISTS idx_volunteers_email ON volunteers(email);
 CREATE INDEX IF NOT EXISTS idx_submissions_volunteer_id ON submissions(volunteer_id);
 CREATE INDEX IF NOT EXISTS idx_submissions_event_id ON submissions(event_id);
 CREATE INDEX IF NOT EXISTS idx_events_qr_code ON events(qr_code);
 CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
+CREATE INDEX IF NOT EXISTS idx_events_created_by ON events(created_by);
+CREATE INDEX IF NOT EXISTS idx_event_verifications_event_id ON event_verifications(event_id);
 CREATE INDEX IF NOT EXISTS idx_points_history_volunteer_id ON points_history(volunteer_id);
 """
 
+
+def hash_pw(password):
+    salt = os.urandom(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
+    return salt.hex() + ":" + dk.hex()
+
+
 VOLUNTEERS = [
-    (100001, "alisa_iv", "Алиса Иванова", "Москва", "+79001111111", "volunteer", "active", 350),
-    (100002, "boris_p", "Борис Петров", "Санкт-Петербург", "+79002222222", "volunteer", "active", 280),
-    (100003, "vika_s", "Виктория Сидорова", "Казань", "+79003333333", "volunteer", "active", 220),
-    (100004, "grigory_k", "Григорий Козлов", "Новосибирск", "+79004444444", "volunteer", "active", 190),
-    (100005, "darya_n", "Дарья Новикова", "Екатеринбург", "+79005555555", "volunteer", "active", 150),
-    (100006, "evgeny_m", "Евгений Морозов", "Москва", "+79006666666", "volunteer", "active", 120),
-    (100007, "zhanna_v", "Жанна Волкова", "Санкт-Петербург", "+79007777777", "volunteer", "active", 80),
-    (100008, "zahar_l", "Захар Лебедев", "Казань", "+79008888888", "volunteer", "inactive", 50),
-    (100009, "irina_s", "Ирина Соколова", "Новосибирск", "+79009999999", "volunteer", "active", 30),
-    (100010, "kirill_p", "Кирилл Попов", "Екатеринбург", "+79001010101", "volunteer", "active", 10),
+    (100001, "alisa_iv", "Алиса Иванова", "Москва", "+79001111111", "alisa@example.com", "volunteer", "active", 350),
+    (100002, "boris_p", "Борис Петров", "Санкт-Петербург", "+79002222222", "boris@example.com", "volunteer", "active", 280),
+    (100003, "vika_s", "Виктория Сидорова", "Казань", "+79003333333", "vika@example.com", "volunteer", "active", 220),
+    (100004, "grigory_k", "Григорий Козлов", "Новосибирск", "+79004444444", "grigory@example.com", "volunteer", "active", 190),
+    (100005, "darya_n", "Дарья Новикова", "Екатеринбург", "+79005555555", "darya@example.com", "volunteer", "active", 150),
+    (100006, "evgeny_m", "Евгений Морозов", "Москва", "+79006666666", "evgeny@example.com", "volunteer", "active", 120),
+    (100007, "zhanna_v", "Жанна Волкова", "Санкт-Петербург", "+79007777777", "zhanna@example.com", "volunteer", "active", 80),
+    (100008, "zahar_l", "Захар Лебедев", "Казань", "+79008888888", "zahar@example.com", "volunteer", "inactive", 50),
+    (100009, "irina_s", "Ирина Соколова", "Новосибирск", "+79009999999", "irina@example.com", "volunteer", "active", 30),
+    (100010, "kirill_p", "Кирилл Попов", "Екатеринбург", "+79001010101", "kirill@example.com", "volunteer", "active", 10),
 ]
 
-# Coordinator
 COORDINATOR = (200001, "coordinator_main", "Мария Координаторова", "Москва", "+79000000001", "coordinator", "active", 0)
 
 COMPLETED_EVENTS = [
@@ -123,48 +151,29 @@ PLANNED_EVENTS = [
      55.7887, 49.1221, "2026-04-15", "planned", 0),
 ]
 
-# Submissions: (volunteer_idx, event_idx, points)
-# volunteer_idx is 0-based index into VOLUNTEERS
-# event_idx is 0-based index into COMPLETED_EVENTS
 SUBMISSIONS = [
-    # Алиса — 7 submissions across events (350 points)
     (0, 0, 50), (0, 1, 50), (0, 2, 50), (0, 3, 50), (0, 4, 50), (0, 0, 50), (0, 1, 50),
-    # Борис — 5 submissions (280 points)
     (1, 0, 56), (1, 1, 56), (1, 2, 56), (1, 3, 56), (1, 4, 56),
-    # Виктория — 4 submissions (220 points)
     (2, 2, 55), (2, 3, 55), (2, 4, 55), (2, 0, 55),
-    # Григорий — 3 submissions (190 points, some with bonuses)
     (3, 3, 65), (3, 4, 65), (3, 0, 60),
-    # Дарья — 3 submissions (150 points)
     (4, 4, 50), (4, 0, 50), (4, 1, 50),
-    # Евгений — 2 submissions (120 points)
     (5, 0, 60), (5, 1, 60),
-    # Жанна — 1 submission (80 points)
     (6, 1, 80),
-    # Захар — 1 submission (50 points)
     (7, 2, 50),
-    # Ирина — 1 submission (30 points)
     (8, 3, 30),
-    # Кирилл — 0 verified, 1 rejected (10 points from partial)
     (9, 4, 10),
 ]
 
 ACHIEVEMENTS = [
-    # Алиса
     (0, "first_event", "Первая лекция", "Провела первое мероприятие"),
     (0, "marathon", "Марафонец", "5+ мероприятий проведено"),
     (0, "ambassador", "Амбассадор", "Самый активный волонтёр месяца"),
-    # Борис
     (1, "first_event", "Первая лекция", "Провёл первое мероприятие"),
     (1, "star", "Звезда сцены", "Самая большая аудитория — 50 человек"),
-    # Виктория
     (2, "first_event", "Первая лекция", "Провела первое мероприятие"),
     (2, "multicity", "Мультигород", "Мероприятия в разных городах"),
-    # Григорий
     (3, "first_event", "Первая лекция", "Провёл первое мероприятие"),
-    # Дарья
     (4, "first_event", "Первая лекция", "Провела первое мероприятие"),
-    # Евгений
     (5, "first_event", "Первая лекция", "Провёл первое мероприятие"),
 ]
 
@@ -172,7 +181,6 @@ ACHIEVEMENTS = [
 def main():
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
 
-    # Remove old DB for clean seed
     if os.path.exists(DB_PATH):
         os.remove(DB_PATH)
         print(f"Удалена старая БД: {DB_PATH}")
@@ -180,30 +188,37 @@ def main():
     conn = sqlite3.connect(DB_PATH)
     conn.executescript(SCHEMA)
 
+    demo_pw = hash_pw("demo123")
+
     # Insert coordinator
     conn.execute(
-        "INSERT INTO volunteers (telegram_id, username, full_name, city, phone, role, status, points) VALUES (?,?,?,?,?,?,?,?)",
+        """INSERT INTO volunteers (telegram_id, username, full_name, city, phone, role, status, points)
+           VALUES (?,?,?,?,?,?,?,?)""",
         COORDINATOR,
     )
     coordinator_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
-    # Insert volunteers
+    # Insert volunteers with email + password
     volunteer_ids = []
-    for v in VOLUNTEERS:
+    for tg_id, username, name, city, phone, email, role, status, points in VOLUNTEERS:
         conn.execute(
-            "INSERT INTO volunteers (telegram_id, username, full_name, city, phone, role, status, points) VALUES (?,?,?,?,?,?,?,?)",
-            v,
+            """INSERT INTO volunteers (telegram_id, username, full_name, city, phone, email, password_hash, role, status, points)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (tg_id, username, name, city, phone, email, demo_pw, role, status, points),
         )
         vid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         volunteer_ids.append(vid)
     print(f"Создано {len(volunteer_ids)} волонтёров + 1 координатор")
+    print(f"  Демо-вход волонтёра: alisa@example.com / demo123")
 
     # Insert completed events
     event_ids = []
     for title, desc, loc, lat, lon, date, status, attendance in COMPLETED_EVENTS:
         qr = f"EVT-{uuid.uuid4().hex[:8].upper()}"
         conn.execute(
-            "INSERT INTO events (title, description, location_name, location_lat, location_lon, scheduled_date, status, qr_code, coordinator_id, attendance_count) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            """INSERT INTO events (title, description, location_name, location_lat, location_lon,
+                                   scheduled_date, status, qr_code, coordinator_id, attendance_count)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
             (title, desc, loc, lat, lon, date, status, qr, coordinator_id, attendance),
         )
         eid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
@@ -215,7 +230,9 @@ def main():
     for title, desc, loc, lat, lon, date, status, attendance in PLANNED_EVENTS:
         qr = f"EVT-{uuid.uuid4().hex[:8].upper()}"
         conn.execute(
-            "INSERT INTO events (title, description, location_name, location_lat, location_lon, scheduled_date, status, qr_code, coordinator_id, attendance_count) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            """INSERT INTO events (title, description, location_name, location_lat, location_lon,
+                                   scheduled_date, status, qr_code, coordinator_id, attendance_count)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
             (title, desc, loc, lat, lon, date, status, qr, coordinator_id, attendance),
         )
         eid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
@@ -262,7 +279,9 @@ def main():
 
     print(f"\nБД создана: {DB_PATH}")
     print("Демо-данные загружены успешно!")
-    print("\nДля запуска бота: python bot/main.py")
+    print("\nДля запуска: python bot/main.py")
+    print("Координатор: admin123")
+    print("Волонтёр: alisa@example.com / demo123")
 
 
 if __name__ == "__main__":
