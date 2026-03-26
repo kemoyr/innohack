@@ -31,6 +31,9 @@ MENU_VOLUNTEER_HEADER = "<b>Главное меню волонтёра</b>"
 BTN_SUBMIT_REPORT = "📝 Подать отчёт"
 BTN_MY_STATS = "📊 Моя статистика"
 BTN_MY_ACHIEVEMENTS = "🏅 Мои достижения"
+BTN_MY_REPORTS = "📋 Мои отчёты"
+BTN_VOLUNTEERS = "👥 Волонтёры"
+BTN_LEADERBOARD = "🏆 Рейтинг"
 
 # ── Submission Flow ───────────────
 SUB_ASK_LOCATION = (
@@ -116,8 +119,14 @@ STATS_FORMAT = (
 MY_STATS_FORMAT = (
     "<b>📊 Ваша статистика</b>\n\n"
     "Баллов: <b>{points}</b>\n"
+    "Место в рейтинге: <b>{rank}</b>\n"
     "Отчётов: <b>{submissions_count}</b>\n"
-    "Достижений: <b>{achievements_count}</b>"
+    "Достижений: <b>{achievements_count}</b>\n\n"
+    "<b>Проверки по отчётам:</b>\n"
+    "  EXIF подтверждён: {exif_count} из {submissions_count}\n"
+    "  Геолокация: {geo_count} из {submissions_count}\n"
+    "  Селфи: {selfie_count} из {submissions_count}\n"
+    "  QR-код: {qr_count} из {submissions_count}"
 )
 
 # ── Calendar ──────────────────────
@@ -153,7 +162,7 @@ MEDAL_THIRD = "🥉"
 # ── Achievements ──────────────────
 ACHIEVEMENT_EARNED = "🏅 <b>Новое достижение!</b>\n\n{title}\n{description}"
 ACHIEVEMENTS_HEADER = "<b>🏅 Ваши достижения</b>\n"
-ACHIEVEMENTS_ROW = "• <b>{title}</b> — {description}"
+ACHIEVEMENTS_ROW = "• <b>{title}</b> — {description}\n  📅 Получено: {date}"
 ACHIEVEMENTS_EMPTY = "У вас пока нет достижений. Подавайте отчёты, чтобы получать награды!"
 
 # Achievement definitions
@@ -167,6 +176,31 @@ ACH_100_POINTS_TITLE = "Сотня"
 ACH_100_POINTS_DESC = "Набрано 100 баллов"
 ACH_500_POINTS_TITLE = "Полтысячи"
 ACH_500_POINTS_DESC = "Набрано 500 баллов"
+
+# ── Volunteer Reports ────────────
+MY_REPORTS_HEADER = "<b>📋 Ваши отчёты</b>\n"
+MY_REPORTS_EMPTY = "У вас пока нет отчётов. Нажмите «📝 Подать отчёт», чтобы создать первый!"
+MY_REPORTS_ROW = (
+    "{i}. <b>{event_title}</b>\n"
+    "   Дата: {date}\n"
+    "   Баллы: +{points} | Статус: {status}\n"
+    "   Проверки: EXIF {exif} | Гео {geo} | Селфи {selfie} | QR {qr}"
+)
+MY_REPORTS_TOTAL = "\n<b>Итого отчётов:</b> {count} | <b>Всего баллов:</b> {points}"
+
+# ── Public volunteer list & profile ──
+VOLUNTEERS_HEADER = "<b>👥 Волонтёры</b>\n\nВсего: {count}"
+VOLUNTEERS_ROW = "{i}. {name} — {points} баллов"
+VOLUNTEER_PUBLIC_PROFILE = (
+    "<b>{name}</b>\n"
+    "Город: {city}\n"
+    "Баллов: <b>{points}</b>\n"
+    "Место в рейтинге: <b>{rank}</b>\n"
+    "Отчётов: <b>{submissions}</b>\n"
+    "Достижений: <b>{achievements}</b>\n"
+    "Статус: {status}"
+)
+VOLUNTEER_NOT_FOUND = "Волонтёр не найден."
 
 # ── Errors ────────────────────────
 ERROR_GENERAL = "Произошла ошибка. Попробуйте позже."

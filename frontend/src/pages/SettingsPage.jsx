@@ -1,6 +1,10 @@
-import { Settings, Server, Bot, User, ExternalLink, Globe, Shield } from 'lucide-react';
+import { Server, Bot, User, ExternalLink, Globe, Shield } from 'lucide-react';
+import { getUser } from '../api';
 
 export default function SettingsPage() {
+  const user = getUser();
+  const isCoordinator = user?.role === 'coordinator';
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -55,15 +59,21 @@ export default function SettingsPage() {
               <Shield size={24} className="text-primary-700" />
             </div>
             <div>
-              <p className="font-semibold text-neutral-900">Координатор</p>
-              <p className="text-sm text-neutral-500">Полный доступ к панели управления</p>
+              <p className="font-semibold text-neutral-900">{user?.full_name || 'Пользователь'}</p>
+              <p className="text-sm text-neutral-500">
+                {isCoordinator ? 'Полный доступ к панели управления' : 'Волонтёр платформы'}
+              </p>
             </div>
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between py-2.5 border-b border-neutral-100">
               <span className="text-sm text-neutral-500">Роль</span>
-              <span className="px-2.5 py-1 bg-primary-100 text-primary-800 rounded-lg text-xs font-semibold">
-                Администратор
+              <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                isCoordinator
+                  ? 'bg-primary-100 text-primary-800'
+                  : 'bg-emerald-50 text-emerald-700'
+              }`}>
+                {isCoordinator ? 'Координатор' : 'Волонтёр'}
               </span>
             </div>
             <div className="flex items-center justify-between py-2.5">

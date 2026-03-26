@@ -67,7 +67,7 @@ export default function VolunteerDetail() {
           className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-black rounded-xl hover:bg-primary-400 transition-colors text-sm font-bold"
         >
           <ArrowLeft size={16} />
-          Назад к команде
+          Назад
         </button>
       </div>
     );
@@ -82,11 +82,11 @@ export default function VolunteerDetail() {
     <div className="space-y-6">
       {/* Back button */}
       <button
-        onClick={() => navigate('/team')}
+        onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-sm text-neutral-500 hover:text-primary-700 transition-colors font-medium"
       >
         <ArrowLeft size={16} />
-        <span>Назад к команде</span>
+        <span>Назад</span>
       </button>
 
       {/* Profile Header */}

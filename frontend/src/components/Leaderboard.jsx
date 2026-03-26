@@ -48,7 +48,7 @@ export default function Leaderboard({ data, compact = false }) {
         return (
           <div
             key={person.id}
-            onClick={() => navigate(`/team/${person.id}`)}
+            onClick={() => navigate(`/volunteer/${person.id}`)}
             className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200 hover:shadow-md ${style.bg} ${style.border}`}
           >
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${style.rankBg}`}>
@@ -79,7 +79,7 @@ export default function Leaderboard({ data, compact = false }) {
         return (
           <div
             key={person.id}
-            onClick={() => navigate(`/team/${person.id}`)}
+            onClick={() => navigate(`/volunteer/${person.id}`)}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 hover:bg-neutral-50"
           >
             <span className="w-7 text-center text-sm font-semibold text-neutral-400">

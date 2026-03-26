@@ -40,8 +40,9 @@ def volunteer_menu_keyboard():
     keyboard = [
         [KeyboardButton(text=strings.BTN_SUBMIT_REPORT)],
         [KeyboardButton(text=strings.BTN_MY_PROFILE), KeyboardButton(text=strings.BTN_MY_STATS)],
-        [KeyboardButton(text=strings.BTN_EVENTS), KeyboardButton(text=strings.BTN_MY_ACHIEVEMENTS)],
-        [KeyboardButton(text=strings.BTN_HELP)],
+        [KeyboardButton(text=strings.BTN_MY_REPORTS), KeyboardButton(text=strings.BTN_MY_ACHIEVEMENTS)],
+        [KeyboardButton(text=strings.BTN_VOLUNTEERS), KeyboardButton(text=strings.BTN_LEADERBOARD)],
+        [KeyboardButton(text=strings.BTN_EVENTS), KeyboardButton(text=strings.BTN_HELP)],
     ]
     # Add webapp button if configured
     if settings.WEBAPP_URL:

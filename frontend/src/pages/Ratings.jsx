@@ -161,7 +161,7 @@ export default function Ratings() {
                     <div
                       key={person.id}
                       className={`flex flex-col items-center cursor-pointer transition-all duration-200 hover:-translate-y-1 ${config.order} ${config.mt}`}
-                      onClick={() => navigate(`/team/${person.id}`)}
+                      onClick={() => navigate(`/volunteer/${person.id}`)}
                     >
                       <div className={`w-8 h-8 ${config.rankBg} rounded-full flex items-center justify-center ${config.rankText} text-sm font-bold mb-3 shadow-sm`}>
                         {config.place}
@@ -203,7 +203,7 @@ export default function Ratings() {
                     <div
                       key={person.id}
                       className="flex flex-col items-center cursor-pointer transition-all duration-200 hover:-translate-y-1"
-                      onClick={() => navigate(`/team/${person.id}`)}
+                      onClick={() => navigate(`/volunteer/${person.id}`)}
                     >
                       <div className={`w-8 h-8 ${config.rankBg} rounded-full flex items-center justify-center ${config.rankText} text-sm font-bold mb-3`}>
                         {config.place}
@@ -319,7 +319,7 @@ export default function Ratings() {
                       return (
                         <tr
                           key={person.id}
-                          onClick={() => navigate(`/team/${person.id}`)}
+                          onClick={() => navigate(`/volunteer/${person.id}`)}
                           className="cursor-pointer transition-colors duration-150 hover:bg-primary-50/50"
                         >
                           <td className="px-6 py-3.5">

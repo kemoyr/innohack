@@ -69,6 +69,7 @@ export default function App() {
       <Route path="/" element={<SmartRoute><Dashboard /></SmartRoute>} />
       <Route path="/calendar" element={<SmartRoute><Calendar /></SmartRoute>} />
       <Route path="/ratings" element={<SmartRoute><Ratings /></SmartRoute>} />
+      <Route path="/volunteer/:id" element={<SmartRoute><VolunteerDetail /></SmartRoute>} />
 
       {/* Coordinator-only */}
       <Route path="/team" element={<CoordinatorRoute><Team /></CoordinatorRoute>} />

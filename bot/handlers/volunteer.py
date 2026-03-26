@@ -8,15 +8,20 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import (
     Message,
+    CallbackQuery,
     ReplyKeyboardMarkup,
     KeyboardButton,
     ReplyKeyboardRemove,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
 )
 
 from bot.config import settings
 from bot.database import (
     get_volunteer,
+    get_volunteer_by_id,
     get_event_by_qr,
+    get_event_by_id,
     mark_qr_used,
     create_submission,
     add_points,
@@ -25,6 +30,7 @@ from bot.database import (
     get_volunteer_submissions,
     get_leaderboard,
     get_planned_events,
+    get_all_volunteers,
 )
 from bot.utils.exif import extract_exif, is_recent
 from bot.utils.geo import is_location_match
@@ -512,12 +518,28 @@ async def my_stats(message: Message):
 
         submissions = await get_volunteer_submissions(volunteer["id"])
         achievements = await get_achievements(volunteer["id"])
+        leaderboard = await get_leaderboard(100)
+        rank = next(
+            (i + 1 for i, v in enumerate(leaderboard) if v["id"] == volunteer["id"]),
+            "—",
+        )
+
+        # Count verified checks across all submissions
+        exif_count = sum(1 for s in submissions if s.get("exif_verified"))
+        geo_count = sum(1 for s in submissions if s.get("geo_verified"))
+        selfie_count = sum(1 for s in submissions if s.get("selfie_verified"))
+        qr_count = sum(1 for s in submissions if s.get("qr_verified"))
 
         await message.answer(
             strings.MY_STATS_FORMAT.format(
                 points=volunteer["points"],
+                rank=rank,
                 submissions_count=len(submissions),
                 achievements_count=len(achievements),
+                exif_count=exif_count,
+                geo_count=geo_count,
+                selfie_count=selfie_count,
+                qr_count=qr_count,
             )
         )
     except Exception as e:
@@ -542,10 +564,196 @@ async def my_achievements(message: Message):
 
         lines = [strings.ACHIEVEMENTS_HEADER]
         for a in achievements:
-            lines.append(strings.ACHIEVEMENTS_ROW.format(title=a["title"], description=a["description"]))
+            date_str = a["created_at"][:10] if a.get("created_at") else "—"
+            lines.append(strings.ACHIEVEMENTS_ROW.format(
+                title=a["title"], description=a["description"], date=date_str
+            ))
         await message.answer("\n".join(lines))
     except Exception as e:
         logger.error("Error showing achievements: %s", e)
+        await message.answer(strings.ERROR_GENERAL)
+
+
+# ── My Reports ───────────────────
+
+@router.message(F.text == strings.BTN_MY_REPORTS)
+async def my_reports(message: Message):
+    try:
+        volunteer = await get_volunteer(message.from_user.id)
+        if not volunteer:
+            await message.answer(strings.ERROR_NOT_REGISTERED)
+            return
+
+        submissions = await get_volunteer_submissions(volunteer["id"])
+        if not submissions:
+            await message.answer(strings.MY_REPORTS_EMPTY)
+            return
+
+        lines = [strings.MY_REPORTS_HEADER]
+        for i, sub in enumerate(submissions[:10], 1):
+            # Get event title
+            event_title = "Без QR-кода"
+            if sub.get("event_id"):
+                event = await get_event_by_id(sub["event_id"])
+                if event:
+                    event_title = event["title"]
+
+            # Status text
+            status_map = {
+                "verified": "✅ Подтверждён",
+                "pending": "⏳ На проверке",
+                "rejected": "❌ Отклонён",
+            }
+            status_text = status_map.get(sub["status"], sub["status"])
+
+            # Verification icons
+            exif_icon = "✅" if sub["exif_verified"] else "❌"
+            geo_icon = "✅" if sub["geo_verified"] else "❌"
+            selfie_icon = "✅" if sub["selfie_verified"] else "❌"
+            qr_icon = "✅" if sub["qr_verified"] else "❌"
+
+            # Date
+            date_str = sub["created_at"][:10] if sub.get("created_at") else "—"
+
+            lines.append(strings.MY_REPORTS_ROW.format(
+                i=i,
+                event_title=event_title,
+                date=date_str,
+                points=sub["points_awarded"],
+                status=status_text,
+                exif=exif_icon,
+                geo=geo_icon,
+                selfie=selfie_icon,
+                qr=qr_icon,
+            ))
+
+        lines.append(strings.MY_REPORTS_TOTAL.format(
+            count=len(submissions),
+            points=volunteer["points"],
+        ))
+
+        await message.answer("\n".join(lines))
+    except Exception as e:
+        logger.error("Error showing reports: %s", e)
+        await message.answer(strings.ERROR_GENERAL)
+
+
+# ── Public: Volunteer List ───────
+
+@router.message(F.text == strings.BTN_VOLUNTEERS)
+async def public_volunteer_list(message: Message):
+    """Show list of all volunteers — available to everyone."""
+    try:
+        volunteers = await get_all_volunteers()
+        # Filter to show only volunteers (not coordinators)
+        vols = [v for v in volunteers if v["role"] == "volunteer"]
+        if not vols:
+            await message.answer(strings.VOLUNTEERS_HEADER.format(count=0))
+            return
+
+        text = strings.VOLUNTEERS_HEADER.format(count=len(vols)) + "\n\n"
+
+        buttons = []
+        for i, v in enumerate(vols, 1):
+            text += strings.VOLUNTEERS_ROW.format(
+                i=i, name=v["full_name"], points=v["points"]
+            ) + "\n"
+            buttons.append([
+                InlineKeyboardButton(
+                    text=f"{v['full_name']}",
+                    callback_data=f"pub_vol:{v['id']}",
+                )
+            ])
+
+        keyboard = InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
+        await message.answer(text, reply_markup=keyboard)
+    except Exception as e:
+        logger.error("Error showing public volunteer list: %s", e)
+        await message.answer(strings.ERROR_GENERAL)
+
+
+# ── Public: Volunteer Profile ────
+
+@router.callback_query(F.data.startswith("pub_vol:"))
+async def public_volunteer_detail(callback: CallbackQuery):
+    """Show public profile of a volunteer — available to everyone."""
+    try:
+        await callback.answer()
+        vol_id = int(callback.data.split(":")[1])
+
+        vol = await get_volunteer_by_id(vol_id)
+        if not vol:
+            await callback.message.answer(strings.VOLUNTEER_NOT_FOUND)
+            return
+
+        submissions = await get_volunteer_submissions(vol_id)
+        achievements = await get_achievements(vol_id)
+        leaderboard = await get_leaderboard(100)
+        rank = next(
+            (i + 1 for i, v in enumerate(leaderboard) if v["id"] == vol_id),
+            "—",
+        )
+        status_text = "Активен" if vol["status"] == "active" else "Неактивен"
+
+        text = strings.VOLUNTEER_PUBLIC_PROFILE.format(
+            name=vol["full_name"],
+            city=vol["city"] or "—",
+            points=vol["points"],
+            rank=rank,
+            submissions=len(submissions),
+            achievements=len(achievements),
+            status=status_text,
+        )
+
+        # Show achievements if any
+        if achievements:
+            text += "\n\n<b>Достижения:</b>"
+            for a in achievements:
+                text += f"\n  🏅 {a['title']}"
+
+        await callback.message.answer(text)
+    except Exception as e:
+        logger.error("Error showing public volunteer detail: %s", e)
+
+
+# ── Public: Leaderboard ──────────
+
+@router.message(F.text == strings.BTN_LEADERBOARD)
+async def public_leaderboard(message: Message):
+    """Show leaderboard — available to everyone."""
+    try:
+        leaders = await get_leaderboard(10)
+        if not leaders:
+            await message.answer(strings.RATINGS_HEADER + "\n" + strings.RATINGS_EMPTY)
+            return
+
+        medals = [strings.MEDAL_FIRST, strings.MEDAL_SECOND, strings.MEDAL_THIRD]
+        lines = [strings.RATINGS_HEADER]
+
+        for i, v in enumerate(leaders):
+            if i < 3:
+                lines.append(strings.RATINGS_PODIUM.format(
+                    medal=medals[i], name=v["full_name"], points=v["points"]
+                ))
+            else:
+                lines.append(strings.RATINGS_ROW.format(
+                    i=i + 1, name=v["full_name"], points=v["points"]
+                ))
+
+        # Show current user's position if registered
+        volunteer = await get_volunteer(message.from_user.id)
+        if volunteer and volunteer["role"] == "volunteer":
+            all_leaders = await get_leaderboard(100)
+            my_rank = next(
+                (i + 1 for i, v in enumerate(all_leaders) if v["id"] == volunteer["id"]),
+                None,
+            )
+            if my_rank and my_rank > 10:
+                lines.append(f"\n---\nВы: <b>{my_rank}</b> место — {volunteer['points']} баллов")
+
+        await message.answer("\n".join(lines))
+    except Exception as e:
+        logger.error("Error showing public leaderboard: %s", e)
         await message.answer(strings.ERROR_GENERAL)
 
 

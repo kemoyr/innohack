@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"from bot import strings; print\\(''strings OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''bot/handlers/volunteer.py''\\).read\\(\\)\\); print\\(''volunteer.py syntax OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''bot/handlers/start.py''\\).read\\(\\)\\); print\\(''start.py syntax OK''\\)\")",
+      "Bash(find frontend/src -type f \\\\\\(-name *.jsx -o -name *.js \\\\\\))"
+    ]
+  }
+}

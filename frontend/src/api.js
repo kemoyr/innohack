@@ -112,7 +112,7 @@ const api = {
 
   // Authenticated
   getVolunteers: () => request('GET', '/api/volunteers'),
-  getVolunteer: (id) => request('GET', `/api/volunteers/${id}`),
+  getVolunteer: (id) => publicRequest('GET', `/api/volunteers/${id}`),
   createEvent: (data) => request('POST', '/api/events', data),
   updateEvent: (id, data) => request('PATCH', `/api/events/${id}`, data),
   toggleVolunteerStatus: (id) => request('PATCH', `/api/volunteers/${id}/status`),

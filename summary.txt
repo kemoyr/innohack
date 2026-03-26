@@ -1,0 +1,237 @@
+# BEELINE-2026 PROJECT COMPLETE EXPLORATION
+
+## PROJECT OVERVIEW
+
+Volunteer+ is a dual-mode platform with:
+- Backend: FastAPI + Telegram Bot
+- Frontend: React + Vite + Tailwind CSS
+- Database: SQLite
+- Users: Coordinators, Volunteers, Public
+
+## AUTHENTICATION FLOW
+
+### Coordinator Login
+- Endpoint: POST /api/auth/login
+- Credential: Password only
+- Response: JWT token with role="coordinator"
+
+### Volunteer Registration
+- Endpoint: POST /api/auth/register
+- Fields: full_name, city, email, password
+- Response: JWT token with role="volunteer"
+
+### Volunteer Login
+- Endpoint: POST /api/auth/login/volunteer
+- Credentials: email + password
+- Password: PBKDF2-SHA256 (100k iterations)
+
+### JWT Token Details
+- Algorithm: HS256
+- Expiration: 24 hours
+- Stored in: localStorage as 'volunteer_plus_token'
+
+## ROUTING (App.jsx)
+
+### Public Routes
+- /login → Login page
+- /register → Registration
+- / → SmartRedirect (dashboard)
+
+### Protected Routes
+- /admin → Dashboard (coordinator)
+- /team → Team registry (coordinator)
+- /team/:id → Volunteer detail (coordinator)
+- /calendar → Event calendar
+- /ratings → Leaderboard
+- /settings → Settings (coordinator)
+- /moderation → Moderation queue (coordinator)
+- /my-events → Volunteer events
+
+### Layout System
+1. PublicLayout - PublicNavbar + content
+2. CoordinatorLayout - Sidebar + main-content
+
+## SIDEBAR NAVIGATION
+
+Navigation Items (6 items):
+- Обзор (Dashboard) → /
+- Команда (Team) → /team
+- Календарь (Calendar) → /calendar
+- Рейтинг (Ratings) → /ratings
+- Модерация (Moderation) → /moderation
+- Настройки (Settings) → /settings
+
+Features:
+- Yellow "V+" logo badge
+- Active state highlighting
+- User info section
+- Logout button
+- Fixed left sidebar (264px width)
+- Dark theme (bee-black)
+
+## PUBLIC NAVBAR
+
+Navigation Items:
+- Обзор → /
+- Мероприятия → /calendar
+- Рейтинг → /ratings
+
+Auth Section:
+- Not logged: [Login] [Register]
+- Coordinator: [Name] → /admin
+- Volunteer: [Name] → /my-events
+
+## API CLIENT (api.js)
+
+Storage Functions:
+- getToken() / setToken()
+- clearToken()
+- getUser() / setUser()
+
+Request Types:
+1. request() - Authenticated only
+2. publicRequest() - Optional auth
+3. uploadRequest() - File uploads
+
+Main Endpoints:
+- Auth: login, register, loginVolunteer, getMe
+- Volunteers: getVolunteers, getVolunteer, toggleStatus
+- Events: getEvents, createEvent, updateEvent
+- Stats: getStats, getLeaderboard, getAchievements
+- Activity: getActivity, getChartData
+- Moderation: getModerationQueue, moderateEvent
+
+## PAGES (10 total)
+
+1. Login.jsx - Dual mode (Volunteer/Coordinator)
+2. Register.jsx - Email/password registration
+3. Dashboard.jsx - Metrics, charts, recent activity
+4. Team.jsx - Volunteer registry with search/filter
+5. VolunteerDetail.jsx - Individual profiles
+6. Calendar.jsx - Event management
+7. Ratings.jsx - Leaderboard & achievements
+8. SettingsPage.jsx - System info
+9. ModerationPage.jsx - Event verification
+10. MyEvents.jsx - Volunteer event submission
+
+## COMPONENTS (6 total)
+
+1. Sidebar.jsx - Left navigation
+2. PublicNavbar.jsx - Top bar
+3. EventCard.jsx - Event display
+4. StatsCard.jsx - Metric cards
+5. Leaderboard.jsx - Rankings with podium
+6. ActivityFeed.jsx - Recent activities
+
+## DESIGN COLORS
+
+Primary (Yellow/Gold):
+- primary-500: #FFC800 (main brand)
+- primary-400: lighter
+- primary-700: darker
+- primary-100: light bg
+
+Neutral (Gray):
+- neutral-900: dark text
+- neutral-500: medium gray
+- neutral-100: light bg
+- neutral-50: very light
+
+Status Colors:
+- emerald: success/active
+- red: error/rejected
+- amber: warning/pending
+- blue: info
+
+Special:
+- bee-black: #0f0f0f (dark sidebar)
+
+## KEY PAGES
+
+### Dashboard
+- 4 stat cards
+- 14-day activity chart
+- Recent events (top 5)
+- Activity feed
+- Top volunteers (compact leaderboard)
+- Event distribution pie chart
+
+### Team
+- Grid of volunteer cards
+- Search + filter (All/Active/Inactive)
+- Click card → /team/:id
+- Power button toggle status
+
+### Calendar
+- Tabs: All/Planned/Completed
+- Events grouped by month
+- Create Event button
+- Modal form for new events
+
+### Ratings
+- Podium (top 3)
+- Points distribution chart (top 10)
+- Full leaderboard table
+- Achievements tab
+
+### MyEvents
+- Volunteer event list
+- Verification upload
+- AI analysis results
+- Create event modal
+
+### Moderation
+- Queue tab: pending events
+- History tab: processed events
+- AI score + concerns
+- Approve/Reject buttons
+
+## BACKEND API
+
+Authentication:
+- POST /api/auth/login {password}
+- POST /api/auth/register {full_name, city, email, password}
+- POST /api/auth/login/volunteer {email, password}
+- GET /api/auth/me
+
+Volunteers:
+- GET /api/volunteers
+- GET /api/volunteers/{id}
+- PATCH /api/volunteers/{id}/status
+
+Events:
+- GET /api/events
+- POST /api/events {title, location, date, etc}
+- PATCH /api/events/{id} {status, attendance}
+
+Stats:
+- GET /api/stats
+- GET /api/leaderboard
+- GET /api/achievements
+- GET /api/activity
+- GET /api/stats/charts
+
+## SECURITY
+
+✓ JWT authentication (24hr tokens)
+✓ PBKDF2-SHA256 hashing
+✓ Role-based access control
+✓ Frontend route guards
+✓ Server-side authorization
+✓ CORS enabled
+
+## STATUS
+
+All core features fully implemented:
+✓ Authentication
+✓ Routing
+✓ Pages
+✓ Components
+✓ API endpoints
+✓ Charts/visualizations
+✓ User management
+✓ Moderation
+
+---
+Exploration completed: March 26, 2026
+All source files read completely
