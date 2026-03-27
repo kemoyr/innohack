@@ -7,7 +7,8 @@ from bot.database import (
     create_application, get_application, get_event_applications,
     get_volunteer_applications, get_event_application_count,
     create_review, get_event_reviews, get_volunteer_reviews,
-    get_event_avg_rating, get_organizer_rating,
+    get_event_avg_rating,
+    get_volunteer_event_review,
 )
 from bot.api.routes.auth import get_current_user, get_current_coordinator, get_optional_user
 
@@ -73,6 +74,13 @@ async def my_application_for_event(event_id: int, user=Depends(get_current_user)
     return app or {"applied": False}
 
 
+@router.get("/events/{event_id}/my-review")
+async def my_review_for_event(event_id: int, user=Depends(get_current_user)):
+    """Current user's review for this event, if any."""
+    r = await get_volunteer_event_review(event_id, user["user_id"])
+    return r or {}
+
+
 # ── Reviews ──────────────────────
 
 
@@ -88,10 +96,13 @@ async def review_event(event_id: int, req: ReviewRequest, user=Depends(get_curre
     if event["status"] != "completed":
         raise HTTPException(status_code=400, detail="Отзыв можно оставить только на завершённое мероприятие")
 
-    # Check that user applied to this event
     app = await get_application(event_id, user["user_id"])
-    if not app:
-        raise HTTPException(status_code=403, detail="Вы не подавали заявку на это мероприятие")
+    is_organizer = event.get("created_by") == user["user_id"]
+    if not app and not is_organizer:
+        raise HTTPException(
+            status_code=403,
+            detail="Отзыв могут оставить участники с заявкой или организатор мероприятия",
+        )
 
     try:
         review_id = await create_review(
@@ -118,9 +129,3 @@ async def list_event_reviews(event_id: int):
 async def volunteer_reviews(volunteer_id: int):
     """Reviews written by a volunteer (public)."""
     return await get_volunteer_reviews(volunteer_id)
-
-
-@router.get("/volunteers/{volunteer_id}/organizer-rating")
-async def organizer_rating(volunteer_id: int):
-    """Organizer rating based on events they coordinated/created."""
-    return await get_organizer_rating(volunteer_id)

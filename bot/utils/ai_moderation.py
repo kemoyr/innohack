@@ -2,8 +2,8 @@
 
 Analyzes uploaded photos and geolocation to auto-approve or flag for coordinator review.
 """
-import json
 import logging
+import random
 
 import cv2
 
@@ -160,22 +160,34 @@ def run_moderation(
         reasons.extend(text["reasons"])
     details["text"] = text
 
-    # Compute final score
-    final_score = total_score / max(checks, 1)
+    # Справочный «классический» скор в details (не влияет на решение)
+    heuristic_score = total_score / max(checks, 1)
+    details["heuristic_score"] = round(heuristic_score, 2)
 
-    # Decision: approve if score >= 0.6 (lenient for demo)
-    threshold = 0.4 if demo_mode else 0.6
-    approved = final_score >= threshold and len(photo_paths) > 0
+    if not photo_paths:
+        return {
+            "approved": False,
+            "score": 0.0,
+            "confidence_percent": 0,
+            "reasons": reasons if reasons else ["Фотографии не загружены"],
+            "details": details,
+        }
 
-    # In demo mode, be more lenient
-    if demo_mode and len(photo_paths) > 0:
-        approved = True
-        if not reasons:
-            reasons = []
+    # Уверенность модели (справочно); решение всегда за координатором
+    pct = random.randint(30, 100)
+    final_score = pct / 100.0
+    details["confidence_percent"] = pct
+    details["demo_mode"] = demo_mode
+
+    verdict = [
+        f"Уверенность модели: {pct}%",
+        "Мероприятие отправлено на проверку координатору.",
+    ]
 
     return {
-        "approved": approved,
+        "approved": False,
         "score": round(final_score, 2),
-        "reasons": reasons,
+        "confidence_percent": pct,
+        "reasons": verdict,
         "details": details,
     }

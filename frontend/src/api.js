@@ -126,6 +126,7 @@ const api = {
   applyToEvent: (eventId, data) => request('POST', `/api/events/${eventId}/apply`, data),
   getMyApplications: () => request('GET', '/api/events/my/applications'),
   getMyApplication: (eventId) => request('GET', `/api/events/${eventId}/my-application`),
+  getMyReview: (eventId) => request('GET', `/api/events/${eventId}/my-review`),
   getEventApplications: (eventId) => request('GET', `/api/events/${eventId}/applications`),
 
   // Reviews

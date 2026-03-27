@@ -1,3 +1,5 @@
+import random
+
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
@@ -6,6 +8,7 @@ from bot.database import (
     get_all_events, get_public_events, get_pending_events,
     create_event, update_event_status, get_all_volunteers,
     get_event_by_id, get_event_application_count, get_event_avg_rating,
+    add_points, get_volunteer_by_id,
 )
 from bot.api.routes.auth import get_current_coordinator, get_current_user, get_optional_user
 from bot.utils.qr import generate_event_code
@@ -84,7 +87,7 @@ async def create_new_event(
             lon=event.location_lon,
             scheduled_date=event.scheduled_date,
             qr_code=code,
-            coordinator_id=None,
+            coordinator_id=user["user_id"],
             status="planned",
         )
         return {"id": event_id, "qr_code": code, "status": "planned"}
@@ -109,7 +112,29 @@ async def update_event(
     data: EventUpdate,
     coordinator=Depends(get_current_coordinator),
 ):
-    status = data.status or "completed"
-    attendance = data.attendance_count or 0
-    await update_event_status(event_id, status, attendance)
-    return {"ok": True}
+    event = await get_event_by_id(event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Мероприятие не найдено")
+
+    new_status = data.status if data.status is not None else event["status"]
+    if data.attendance_count is not None:
+        attendance = data.attendance_count
+    else:
+        attendance = event.get("attendance_count") or 0
+
+    points_bonus = None
+    if new_status == "completed" and event.get("status") != "completed":
+        organizer_id = event.get("created_by") or event.get("coordinator_id")
+        if organizer_id:
+            org = await get_volunteer_by_id(organizer_id)
+            if org:
+                points_bonus = random.randint(5, 10)
+                await add_points(
+                    organizer_id,
+                    points_bonus,
+                    reason=f"Бонус организатору за завершение мероприятия №{event_id}",
+                    submission_id=None,
+                )
+
+    await update_event_status(event_id, new_status, attendance)
+    return {"ok": True, "status": new_status, "points_bonus": points_bonus}

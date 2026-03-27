@@ -52,6 +52,7 @@ async def init_db():
                 event_id INTEGER NOT NULL REFERENCES events(id),
                 volunteer_id INTEGER NOT NULL REFERENCES volunteers(id),
                 photo_paths TEXT DEFAULT '[]',
+                volunteer_comment TEXT DEFAULT '',
                 location_lat REAL,
                 location_lon REAL,
                 ai_score REAL DEFAULT 0,
@@ -146,7 +147,12 @@ async def init_db():
                 await db.execute(f"ALTER TABLE {table} ADD COLUMN {col} TEXT DEFAULT {default}")
             except Exception:
                 pass
-
+        try:
+            await db.execute(
+                "ALTER TABLE event_verifications ADD COLUMN volunteer_comment TEXT DEFAULT ''"
+            )
+        except Exception:
+            pass
         # Auto-seed demo data if DB is empty
         cursor = await db.execute("SELECT COUNT(*) FROM volunteers")
         count = (await cursor.fetchone())[0]
@@ -373,6 +379,15 @@ async def get_all_volunteers():
         return [dict(r) for r in rows]
 
 
+async def get_submission_counts_by_volunteer() -> dict[int, int]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "SELECT volunteer_id, COUNT(*) FROM submissions GROUP BY volunteer_id"
+        )
+        rows = await cursor.fetchall()
+        return {int(r[0]): int(r[1]) for r in rows if r[0] is not None}
+
+
 async def get_volunteer_submissions(volunteer_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
@@ -512,18 +527,26 @@ async def moderate_event(event_id: int, status: str, note: str = ""):
 
 async def create_event_verification(
     event_id: int, volunteer_id: int, photo_paths: str = "[]",
+    volunteer_comment: str = "",
     lat=None, lon=None, ai_score: float = 0, ai_approved: int = 0, ai_reasons: str = "[]",
 ):
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
             """INSERT INTO event_verifications
-               (event_id, volunteer_id, photo_paths, location_lat, location_lon,
+               (event_id, volunteer_id, photo_paths, volunteer_comment, location_lat, location_lon,
                 ai_score, ai_approved, ai_reasons)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (event_id, volunteer_id, photo_paths, lat, lon, ai_score, ai_approved, ai_reasons),
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (event_id, volunteer_id, photo_paths, volunteer_comment or "", lat, lon,
+             ai_score, ai_approved, ai_reasons),
         )
         await db.commit()
         return cursor.lastrowid
+
+
+async def delete_verifications_for_event(event_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM event_verifications WHERE event_id = ?", (event_id,))
+        await db.commit()
 
 
 async def get_event_verification(event_id: int):
@@ -547,8 +570,7 @@ async def get_pending_verifications():
                FROM event_verifications ev
                JOIN events e ON ev.event_id = e.id
                JOIN volunteers v ON ev.volunteer_id = v.id
-               WHERE e.status = 'pending' AND ev.ai_approved = 0
-                     AND ev.coordinator_decision = ''
+               WHERE e.status = 'pending' AND ev.coordinator_decision = ''
                ORDER BY ev.created_at DESC"""
         )
         rows = await cursor.fetchall()
@@ -609,13 +631,21 @@ async def create_submission(
 # ── Leaderboard & Points ─────────
 
 
-async def get_leaderboard(limit: int = 10):
+async def get_leaderboard(limit: int | None = None):
+    """All volunteers with role volunteer, ordered by points (new registrations included)."""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
-        cursor = await db.execute(
-            "SELECT * FROM volunteers WHERE role = 'volunteer' ORDER BY points DESC LIMIT ?",
-            (limit,),
-        )
+        if limit is not None:
+            cursor = await db.execute(
+                """SELECT * FROM volunteers WHERE role = 'volunteer'
+                   ORDER BY points DESC, id ASC LIMIT ?""",
+                (limit,),
+            )
+        else:
+            cursor = await db.execute(
+                """SELECT * FROM volunteers WHERE role = 'volunteer'
+                   ORDER BY points DESC, id ASC"""
+            )
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
 
@@ -632,6 +662,18 @@ async def add_points(volunteer_id: int, amount: int, reason: str = "", submissio
             (amount, volunteer_id),
         )
         await db.commit()
+
+
+async def get_volunteer_points_history(volunteer_id: int, limit: int = 200):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """SELECT * FROM points_history WHERE volunteer_id = ?
+               ORDER BY created_at DESC LIMIT ?""",
+            (volunteer_id, limit),
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
 
 
 # ── Achievements ──────────────────
@@ -836,6 +878,17 @@ async def get_event_application_count(event_id: int) -> int:
 # ── Event Reviews ──────────────
 
 
+async def get_volunteer_event_review(event_id: int, volunteer_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM event_reviews WHERE event_id = ? AND volunteer_id = ?",
+            (event_id, volunteer_id),
+        )
+        row = await cursor.fetchone()
+        return _row_to_dict(row)
+
+
 async def create_review(event_id: int, volunteer_id: int, rating: int, comment: str = ""):
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
@@ -886,36 +939,6 @@ async def get_event_avg_rating(event_id: int):
         )
         row = await cursor.fetchone()
         return {"avg_rating": round(row[0], 1) if row[0] else 0, "count": row[1]}
-
-
-async def get_organizer_rating(coordinator_id: int):
-    """Rating for event organizer: avg rating and total participants across their events."""
-    async with aiosqlite.connect(DB_PATH) as db:
-        db.row_factory = aiosqlite.Row
-        # Get all events by this coordinator
-        cursor = await db.execute(
-            "SELECT id, attendance_count FROM events WHERE coordinator_id = ? OR created_by = ?",
-            (coordinator_id, coordinator_id),
-        )
-        events = await cursor.fetchall()
-        event_ids = [e["id"] for e in events]
-        total_participants = sum(e["attendance_count"] or 0 for e in events)
-
-        if not event_ids:
-            return {"avg_rating": 0, "review_count": 0, "total_participants": 0, "event_count": 0}
-
-        placeholders = ",".join("?" * len(event_ids))
-        cursor = await db.execute(
-            f"SELECT AVG(rating) as avg_rating, COUNT(*) as cnt FROM event_reviews WHERE event_id IN ({placeholders})",
-            event_ids,
-        )
-        row = await cursor.fetchone()
-        return {
-            "avg_rating": round(row["avg_rating"], 1) if row["avg_rating"] else 0,
-            "review_count": row["cnt"],
-            "total_participants": total_participants,
-            "event_count": len(event_ids),
-        }
 
 
 async def get_recent_achievements(limit: int = 10):

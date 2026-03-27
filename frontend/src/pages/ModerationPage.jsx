@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShieldCheck, ShieldX, Clock, CheckCircle2, XCircle, Loader2, History, AlertTriangle, MapPin, CalendarDays, User, Brain } from 'lucide-react';
+import { ShieldCheck, ShieldX, Clock, CheckCircle2, XCircle, Loader2, History, AlertTriangle, MapPin, CalendarDays, User, Brain, MessageSquare } from 'lucide-react';
 import api from '../api';
 
 export default function ModerationPage() {
@@ -125,26 +125,37 @@ export default function ModerationPage() {
                   </span>
                 </div>
 
-                {/* AI analysis */}
+                {item.volunteer_comment?.trim() ? (
+                  <div className="bg-primary-50/60 border border-primary-100 rounded-lg p-4 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageSquare size={14} className="text-primary-700" />
+                      <span className="text-xs font-semibold text-neutral-700">Текст от волонтёра</span>
+                    </div>
+                    <p className="text-sm text-neutral-800 whitespace-pre-wrap">{item.volunteer_comment.trim()}</p>
+                  </div>
+                ) : null}
+
+                {/* AI reference confidence */}
                 <div className="bg-neutral-50 rounded-lg p-4 mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Brain size={14} className="text-neutral-500" />
-                    <span className="text-xs font-semibold text-neutral-600">ИИ-анализ</span>
-                    <span className="text-xs text-neutral-400 ml-auto">
-                      Оценка: {Math.round((item.ai_score || 0) * 100)}%
+                    <span className="text-xs font-semibold text-neutral-600">Справка ИИ</span>
+                    <span className="text-xs font-bold text-primary-800 ml-auto">
+                      Уверенность модели:{' '}
+                      {item.ai_confidence_percent ?? Math.round((item.ai_score || 0) * 100)}%
                     </span>
                   </div>
                   {item.ai_reasons && item.ai_reasons.length > 0 ? (
                     <ul className="space-y-1">
                       {item.ai_reasons.map((reason, i) => (
-                        <li key={i} className="text-xs text-red-600 flex items-start gap-1.5">
-                          <XCircle size={11} className="shrink-0 mt-0.5" />
+                        <li key={i} className="text-xs text-neutral-600 flex items-start gap-1.5">
+                          <span className="text-neutral-400 shrink-0 mt-0.5">•</span>
                           {reason}
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-xs text-neutral-400">Нет замечаний</p>
+                    <p className="text-xs text-neutral-400">Нет пояснений</p>
                   )}
                 </div>
 
@@ -194,7 +205,8 @@ export default function ModerationPage() {
                   <tr className="bg-neutral-50/80">
                     <th className="text-left px-5 py-3 text-xs font-semibold text-neutral-500 uppercase">Мероприятие</th>
                     <th className="text-left px-5 py-3 text-xs font-semibold text-neutral-500 uppercase">Волонтёр</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-neutral-500 uppercase">ИИ</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-neutral-500 uppercase max-w-[200px]">Текст</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-neutral-500 uppercase">Уверенн.</th>
                     <th className="text-left px-5 py-3 text-xs font-semibold text-neutral-500 uppercase">Статус</th>
                     <th className="text-left px-5 py-3 text-xs font-semibold text-neutral-500 uppercase">Дата</th>
                   </tr>
@@ -204,9 +216,14 @@ export default function ModerationPage() {
                     <tr key={item.id} className="hover:bg-neutral-50/50">
                       <td className="px-5 py-3 text-sm text-neutral-800 font-medium">{item.event_title}</td>
                       <td className="px-5 py-3 text-sm text-neutral-500">{item.volunteer_name}</td>
+                      <td className="px-5 py-3 text-xs text-neutral-600 max-w-[220px]">
+                        <span className="line-clamp-2" title={item.volunteer_comment || ''}>
+                          {(item.volunteer_comment || '').trim() || '—'}
+                        </span>
+                      </td>
                       <td className="px-5 py-3">
-                        <span className={`text-xs font-semibold ${item.ai_approved ? 'text-emerald-600' : 'text-red-500'}`}>
-                          {Math.round((item.ai_score || 0) * 100)}%
+                        <span className="text-xs font-semibold text-neutral-700">
+                          {item.ai_confidence_percent ?? Math.round((item.ai_score || 0) * 100)}%
                         </span>
                       </td>
                       <td className="px-5 py-3">

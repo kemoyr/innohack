@@ -11,6 +11,7 @@ from bot.api.routes.auth import get_current_user, get_current_coordinator
 from bot.config import settings
 from bot.database import (
     get_event_by_id, create_event_verification, get_event_verification,
+    delete_verifications_for_event,
     get_pending_verifications, get_all_verifications,
     update_verification_decision, moderate_event,
     get_pending_events, get_events_by_creator,
@@ -25,6 +26,7 @@ async def upload_verification(
     event_id: int,
     location_lat: float = Form(0.0),
     location_lon: float = Form(0.0),
+    volunteer_comment: str = Form(""),
     photos: list[UploadFile] = File(default=[]),
     user=Depends(get_current_user),
 ):
@@ -38,6 +40,15 @@ async def upload_verification(
 
     if event["status"] not in ("pending",):
         raise HTTPException(status_code=400, detail="Мероприятие уже проверено")
+
+    text = (volunteer_comment or "").strip()
+    if len(text) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Опишите мероприятие текстом (не менее 10 символов)",
+        )
+
+    await delete_verifications_for_event(event_id)
 
     # Save photos to temp files for analysis
     temp_paths = []
@@ -66,29 +77,28 @@ async def upload_verification(
             except OSError:
                 pass
 
-    # Save verification record
+    # Save verification record (всегда ждёт координатора; ai_approved не используем для очереди)
     ver_id = await create_event_verification(
         event_id=event_id,
         volunteer_id=user["user_id"],
         photo_paths=json.dumps([p.filename for p in photos]),
+        volunteer_comment=text,
         lat=location_lat if location_lat != 0 else None,
         lon=location_lon if location_lon != 0 else None,
         ai_score=result["score"],
-        ai_approved=1 if result["approved"] else 0,
+        ai_approved=0,
         ai_reasons=json.dumps(result["reasons"], ensure_ascii=False),
     )
 
-    # If AI approved, auto-publish the event
-    if result["approved"]:
-        await moderate_event(event_id, "planned", "Автоматически одобрено ИИ")
-
     return {
         "verification_id": ver_id,
-        "ai_approved": result["approved"],
+        "ai_approved": False,
         "ai_score": result["score"],
+        "ai_confidence_percent": result.get("confidence_percent")
+        or int(round(result["score"] * 100)),
         "ai_reasons": result["reasons"],
         "ai_details": result["details"],
-        "event_status": "planned" if result["approved"] else "pending",
+        "event_status": "pending",
     }
 
 

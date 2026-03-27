@@ -10,7 +10,9 @@ import sqlite3
 import uuid
 import hashlib
 
-DB_PATH = os.getenv("DB_PATH", "data/volunteer.db")
+from bot.config import settings
+
+DB_PATH = settings.DB_PATH
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS volunteers (
@@ -50,6 +52,7 @@ CREATE TABLE IF NOT EXISTS event_verifications (
     event_id INTEGER NOT NULL REFERENCES events(id),
     volunteer_id INTEGER NOT NULL REFERENCES volunteers(id),
     photo_paths TEXT DEFAULT '[]',
+    volunteer_comment TEXT DEFAULT '',
     location_lat REAL,
     location_lon REAL,
     ai_score REAL DEFAULT 0,

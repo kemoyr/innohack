@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Clock, CheckCircle2, XCircle, MapPin, CalendarDays, Users, Star, UserPlus, Loader2 } from 'lucide-react';
 import { getToken, getUser } from '../api';
 import api from '../api';
@@ -70,6 +70,35 @@ export default function EventCard({ event, onApplied }) {
   const [error, setError] = useState('');
   const [form, setForm] = useState({ full_name: user?.full_name || '', email: '', phone: '' });
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
+  const [showComplete, setShowComplete] = useState(false);
+  const [completeAttendance, setCompleteAttendance] = useState('');
+  const [completing, setCompleting] = useState(false);
+  const [completeMessage, setCompleteMessage] = useState('');
+
+  const isCoordinator = user?.role === 'coordinator';
+  const isEventOrganizer =
+    user?.user_id != null &&
+    event?.created_by != null &&
+    Number(user.user_id) === Number(event.created_by);
+
+  useEffect(() => {
+    if (!token || !event?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [app, rev] = await Promise.all([
+          api.getMyApplication(event.id).catch(() => null),
+          api.getMyReview(event.id).catch(() => null),
+        ]);
+        if (cancelled) return;
+        if (app && app.id) setApplied(true);
+        if (rev && rev.id) setReviewed(true);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token, event?.id]);
 
   async function handleApply(e) {
     e.preventDefault();
@@ -100,6 +129,30 @@ export default function EventCard({ event, onApplied }) {
       setError(err.message);
     } finally {
       setReviewing(false);
+    }
+  }
+
+  async function handleCompleteEvent(e) {
+    e.preventDefault();
+    setCompleting(true);
+    setCompleteMessage('');
+    setError('');
+    try {
+      const attendance = parseInt(String(completeAttendance), 10);
+      const data = await api.updateEvent(event.id, {
+        status: 'completed',
+        attendance_count: Number.isFinite(attendance) ? attendance : 0,
+      });
+      setCompleteMessage(
+        data.points_bonus != null
+          ? `Мероприятие завершено. Организатору начислено +${data.points_bonus} баллов.`
+          : 'Мероприятие завершено.',
+      );
+      if (onApplied) onApplied();
+    } catch (err) {
+      setError(err.message || 'Не удалось завершить');
+    } finally {
+      setCompleting(false);
     }
   }
 
@@ -164,8 +217,70 @@ export default function EventCard({ event, onApplied }) {
         </div>
       </div>
 
+      {/* Coordinator: complete planned event */}
+      {isLoggedIn && isCoordinator && isPlanned && (
+        <div className="mt-3 pt-3 border-t border-neutral-100">
+          {!showComplete ? (
+            <button
+              type="button"
+              onClick={() => {
+                setShowComplete(true);
+                setCompleteAttendance(String(event.attendance_count || ''));
+                setCompleteMessage('');
+                setError('');
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-900 rounded-lg text-xs font-semibold hover:bg-emerald-200 transition-all"
+            >
+              <CheckCircle2 size={14} />
+              Завершить мероприятие
+            </button>
+          ) : (
+            <form onSubmit={handleCompleteEvent} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-1">
+                  Число участников (необязательно)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={completeAttendance}
+                  onChange={(e) => setCompleteAttendance(e.target.value)}
+                  placeholder="0"
+                  className="w-full max-w-[140px] px-3 py-2 border border-neutral-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                />
+              </div>
+              {error && <p className="text-xs text-red-600">{error}</p>}
+              {completeMessage && (
+                <p className="text-xs text-emerald-700 font-medium">{completeMessage}</p>
+              )}
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="submit"
+                  disabled={completing || !!completeMessage}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-black rounded-lg text-xs font-bold hover:bg-primary-400 transition-all disabled:opacity-50"
+                >
+                  {completing ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                  Подтвердить завершение
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowComplete(false);
+                    setCompleteMessage('');
+                    setError('');
+                  }}
+                  className="px-4 py-2 text-neutral-500 text-xs font-medium hover:text-neutral-700"
+                >
+                  Отмена
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
+
       {/* Action buttons */}
-      {isLoggedIn && !applied && isPlanned && (
+      {isLoggedIn && !isCoordinator && !applied && isPlanned && (
         <div className="mt-3 pt-3 border-t border-neutral-100">
           {!showApply ? (
             <button
@@ -234,8 +349,12 @@ export default function EventCard({ event, onApplied }) {
         </div>
       )}
 
-      {/* Review button for completed events */}
-      {isLoggedIn && isCompleted && !reviewed && (
+      {/* Review: участники с заявкой или организатор (создатель) мероприятия */}
+      {isLoggedIn &&
+        !isCoordinator &&
+        isCompleted &&
+        (applied || isEventOrganizer) &&
+        !reviewed && (
         <div className="mt-3 pt-3 border-t border-neutral-100">
           {!showReview ? (
             <button

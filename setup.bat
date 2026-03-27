@@ -84,10 +84,9 @@ echo [OK] Data directory ready
 
 REM --- Step 4: Launch ---
 echo.
-echo [4/4] Starting Volunteer+...
+echo [4/4] Starting site (FastAPI + dashboard)...
 echo ========================================
-echo   Telegram bot: running
-echo   Dashboard:    http://localhost:8000
+echo   Open:         http://localhost:8000
 echo   API docs:     http://localhost:8000/docs
 echo   Stop:         Ctrl+C
 echo ========================================

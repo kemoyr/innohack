@@ -8,7 +8,7 @@ from bot.database import (
     get_all_volunteers,
     get_all_events,
     get_achievements,
-    get_volunteer_submissions,
+    get_submission_counts_by_volunteer,
     get_recent_submissions,
     get_recent_achievements,
 )
@@ -32,17 +32,17 @@ async def overall_stats():
 
 @router.get("/leaderboard")
 async def leaderboard():
-    leaders = await get_leaderboard(10)
+    leaders = await get_leaderboard(limit=None)
+    sub_counts = await get_submission_counts_by_volunteer()
     result = []
     for i, v in enumerate(leaders, 1):
-        submissions = await get_volunteer_submissions(v["id"])
         result.append({
             "rank": i,
             "id": v["id"],
             "full_name": v["full_name"],
             "city": v["city"],
             "points": v["points"],
-            "submission_count": len(submissions),
+            "submission_count": sub_counts.get(v["id"], 0),
         })
     return result
 

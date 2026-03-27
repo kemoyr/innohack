@@ -3,15 +3,74 @@ from fastapi import APIRouter, HTTPException, Depends
 from bot.database import (
     get_all_volunteers,
     get_volunteer_submissions,
+    get_volunteer_points_history,
     get_achievements,
     get_all_events,
+    get_events_by_creator,
     toggle_volunteer_status,
     get_volunteer_reviews,
-    get_organizer_rating,
 )
 from bot.api.routes.auth import get_current_coordinator
 
 router = APIRouter(tags=["volunteers"])
+
+
+def _build_activity_reports(submissions: list, points_history: list, event_map: dict) -> list:
+    """Единая лента: отчёты с формулировкой начисления + прочие баллы (без submission_id)."""
+    by_sub: dict = {}
+    for row in points_history:
+        sid = row.get("submission_id")
+        if sid is None:
+            continue
+        prev = by_sub.get(sid)
+        if prev is None or (row.get("id") or 0) > (prev.get("id") or 0):
+            by_sub[sid] = row
+
+    items: list = []
+    for s in submissions:
+        ev_id = s.get("event_id")
+        title = event_map.get(ev_id, "Мероприятие")
+        ph = by_sub.get(s["id"])
+        reason = (ph or {}).get("reason") if ph else None
+        reason = (reason or "").strip()
+        st = s.get("status") or "pending"
+        pts = int(s.get("points_awarded") or 0)
+        if not reason:
+            if st == "verified" and pts > 0:
+                reason = f"Верификация мероприятия №{ev_id}" if ev_id else "Начисление за отчёт"
+            elif st == "rejected":
+                reason = "Отчёт отклонён, баллы не начислены"
+            elif st == "pending":
+                reason = "Отчёт на проверке"
+            else:
+                reason = "Отчёт"
+        items.append({
+            "kind": "submission",
+            "id": s["id"],
+            "created_at": s.get("created_at"),
+            "event_title": title,
+            "status": st,
+            "points_awarded": pts,
+            "accrual_reason": reason,
+        })
+
+    for row in points_history:
+        if row.get("submission_id") is not None:
+            continue
+        amt = int(row.get("amount") or 0)
+        reason = (row.get("reason") or "Начисление баллов").strip()
+        items.append({
+            "kind": "bonus",
+            "id": f"bonus-{row['id']}",
+            "created_at": row.get("created_at"),
+            "event_title": None,
+            "status": "bonus",
+            "points_awarded": amt,
+            "accrual_reason": reason,
+        })
+
+    items.sort(key=lambda x: (x.get("created_at") or ""), reverse=True)
+    return items
 
 
 @router.get("/volunteers")
@@ -49,26 +108,21 @@ async def get_volunteer_detail(volunteer_id: int):
         raise HTTPException(status_code=404, detail="Volunteer not found")
 
     submissions = await get_volunteer_submissions(volunteer_id)
+    points_history = await get_volunteer_points_history(volunteer_id)
     achievements = await get_achievements(volunteer_id)
     reviews = await get_volunteer_reviews(volunteer_id)
-    org_rating = await get_organizer_rating(volunteer_id)
+    created_events = await get_events_by_creator(volunteer_id)
 
-    # Enrich submissions with event titles
     events = await get_all_events()
     event_map = {e["id"]: e["title"] for e in events}
-    enriched_submissions = []
-    for s in submissions:
-        enriched_submissions.append({
-            **s,
-            "event_title": event_map.get(s.get("event_id"), "Мероприятие"),
-        })
+    activity_reports = _build_activity_reports(submissions, points_history, event_map)
 
     return {
         **vol,
-        "submissions": enriched_submissions,
+        "activity_reports": activity_reports,
+        "created_events": created_events,
         "achievements": achievements,
         "reviews": reviews,
-        "organizer_rating": org_rating,
     }
 
 

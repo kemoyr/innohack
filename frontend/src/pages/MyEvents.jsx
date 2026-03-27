@@ -21,6 +21,7 @@ export default function MyEvents() {
   // Verification state
   const [verifying, setVerifying] = useState(null);
   const [verFiles, setVerFiles] = useState([]);
+  const [verText, setVerText] = useState('');
   const [verResult, setVerResult] = useState(null);
   const [uploading, setUploading] = useState(false);
 
@@ -56,10 +57,13 @@ export default function MyEvents() {
 
   async function handleVerify(eventId) {
     if (verFiles.length === 0) return;
+    const comment = verText.trim();
+    if (comment.length < 10) return;
     setUploading(true);
     try {
       const fd = new FormData();
       verFiles.forEach((f) => fd.append('photos', f));
+      fd.append('volunteer_comment', comment);
 
       // Try to get geolocation
       let lat = 0, lon = 0;
@@ -143,7 +147,7 @@ export default function MyEvents() {
                 {/* Pending: show verification upload */}
                 {isPending && !isVerifying && (
                   <button
-                    onClick={() => { setVerifying(ev.id); setVerFiles([]); setVerResult(null); }}
+                    onClick={() => { setVerifying(ev.id); setVerFiles([]); setVerText(''); setVerResult(null); }}
                     className="flex items-center gap-2 px-4 py-2 bg-primary-100 text-primary-800 rounded-lg text-xs font-semibold hover:bg-primary-200 transition-all"
                   >
                     <Upload size={14} />
@@ -154,7 +158,7 @@ export default function MyEvents() {
                 {/* Verification form */}
                 {isVerifying && !verResult && (
                   <div className="mt-3 p-4 bg-neutral-50 rounded-lg space-y-3">
-                    <p className="text-xs font-semibold text-neutral-600">Загрузите фото мероприятия</p>
+                    <p className="text-xs font-semibold text-neutral-600">Фото и описание для координатора</p>
                     <input
                       type="file"
                       accept="image/*"
@@ -165,18 +169,28 @@ export default function MyEvents() {
                     {verFiles.length > 0 && (
                       <p className="text-xs text-neutral-400">{verFiles.length} файл(ов) выбрано</p>
                     )}
-                    <p className="text-xs text-neutral-400">Геолокация будет запрошена автоматически</p>
+                    <label className="block text-xs font-medium text-neutral-600 mt-2">
+                      Текст о мероприятии (увидит координатор)
+                    </label>
+                    <textarea
+                      value={verText}
+                      onChange={(e) => setVerText(e.target.value)}
+                      placeholder="Как прошло мероприятие, сколько было участников, что сделали…"
+                      rows={4}
+                      className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-xs text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 resize-y min-h-[88px]"
+                    />
+                    <p className="text-xs text-neutral-400">Геолокация запрашивается автоматически. ИИ оценивает уверенность; решение всегда за координатором.</p>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleVerify(ev.id)}
-                        disabled={uploading || verFiles.length === 0}
+                        disabled={uploading || verFiles.length === 0 || verText.trim().length < 10}
                         className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-black rounded-lg text-xs font-bold hover:bg-primary-400 transition-all disabled:opacity-50"
                       >
                         {uploading ? <Loader2 size={14} className="animate-spin" /> : <Brain size={14} />}
-                        Отправить на проверку ИИ
+                        Отправить на модерацию
                       </button>
                       <button
-                        onClick={() => { setVerifying(null); setVerResult(null); }}
+                        onClick={() => { setVerifying(null); setVerResult(null); setVerText(''); }}
                         className="px-4 py-2 text-neutral-500 text-xs font-medium hover:text-neutral-700"
                       >
                         Отмена
@@ -187,24 +201,23 @@ export default function MyEvents() {
 
                 {/* Verification result */}
                 {isVerifying && verResult && (
-                  <div className={`mt-3 p-4 rounded-lg ${verResult.ai_approved ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+                  <div className="mt-3 p-4 rounded-lg bg-primary-50 border border-primary-200/60">
                     <div className="flex items-center gap-2 mb-2">
-                      {verResult.ai_approved ? (
-                        <CheckCircle2 size={16} className="text-emerald-600" />
-                      ) : (
-                        <Clock size={16} className="text-amber-600" />
-                      )}
-                      <span className={`text-sm font-semibold ${verResult.ai_approved ? 'text-emerald-700' : 'text-amber-700'}`}>
-                        {verResult.ai_approved ? 'ИИ одобрил мероприятие!' : 'Отправлено координатору на проверку'}
+                      <Clock size={16} className="text-primary-700" />
+                      <span className="text-sm font-semibold text-neutral-800">
+                        Отправлено на проверку координатору
                       </span>
                     </div>
-                    <p className="text-xs text-neutral-500">
-                      Оценка ИИ: {Math.round((verResult.ai_score || 0) * 100)}%
+                    <p className="text-xs text-neutral-600">
+                      Уверенность модели:{' '}
+                      <span className="font-bold text-primary-800">
+                        {verResult.ai_confidence_percent ?? Math.round((verResult.ai_score || 0) * 100)}%
+                      </span>
                     </p>
                     {verResult.ai_reasons?.length > 0 && (
                       <ul className="mt-2 space-y-1">
                         {verResult.ai_reasons.map((r, i) => (
-                          <li key={i} className="text-xs text-red-600">• {r}</li>
+                          <li key={i} className="text-xs text-neutral-600">• {r}</li>
                         ))}
                       </ul>
                     )}
@@ -295,7 +308,7 @@ export default function MyEvents() {
               </div>
             </form>
             <p className="text-xs text-neutral-400 mt-3 text-center">
-              После создания нужно будет загрузить подтверждение (фото + геолокация)
+              После создания — фото, текст и модерация координатора
             </p>
           </div>
         </div>
