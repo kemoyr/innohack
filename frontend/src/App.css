@@ -1,3 +1,1 @@
-.dashboard-layout { display: flex; min-height: 100vh; }
-.main-content { flex: 1; margin-left: 256px; min-height: 100vh; }
-@media (max-width: 768px) { .main-content { margin-left: 0; } }
+/* Layout lives in App.jsx (Tailwind); keep file for any global tweaks */

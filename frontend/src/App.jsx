@@ -1,4 +1,6 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Menu } from 'lucide-react';
 import { getToken, getUser } from './api';
 import Sidebar from './components/Sidebar';
 import PublicNavbar from './components/PublicNavbar';
@@ -24,11 +26,39 @@ function PublicLayout({ children }) {
 }
 
 function SidebarLayout({ children }) {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
+
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="main-content">
-        <div className="p-6 lg:p-8">{children}</div>
+    <div className="flex min-h-screen bg-neutral-50">
+      <Sidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      {mobileNavOpen ? (
+        <button
+          type="button"
+          aria-label="Закрыть меню"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      ) : null}
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:ml-64">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-neutral-200/80 bg-white px-3 py-2.5 shadow-sm lg:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            className="flex rounded-xl p-2.5 text-neutral-800 hover:bg-neutral-100 active:bg-neutral-200"
+            aria-label="Открыть меню"
+          >
+            <Menu size={22} strokeWidth={2} />
+          </button>
+          <span className="text-sm font-bold text-neutral-900">
+            Volunteer<span className="text-primary-600">+</span>
+          </span>
+        </header>
+        <div className="flex-1 p-4 sm:p-5 lg:p-8">{children}</div>
       </div>
     </div>
   );

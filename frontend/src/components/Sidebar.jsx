@@ -1,6 +1,17 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { clearToken, getUser } from '../api';
-import { LayoutDashboard, Users, CalendarDays, Trophy, Settings, LogOut, Shield, ShieldCheck, ClipboardList } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Users,
+  CalendarDays,
+  Trophy,
+  Settings,
+  LogOut,
+  Shield,
+  ShieldCheck,
+  ClipboardList,
+  X,
+} from 'lucide-react';
 
 const coordinatorNav = [
   { to: '/', label: 'Обзор', icon: LayoutDashboard },
@@ -19,7 +30,7 @@ const volunteerNav = [
   { to: '/settings', label: 'Настройки', icon: Settings },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen = false, onClose }) {
   const navigate = useNavigate();
   const user = getUser();
   const isCoordinator = user?.role === 'coordinator';
@@ -27,19 +38,26 @@ export default function Sidebar() {
 
   function handleLogout() {
     clearToken();
+    onClose?.();
     navigate('/login');
   }
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-64 bg-bee-black text-white flex flex-col z-50">
+    <aside
+      className={`fixed left-0 top-0 z-50 flex h-full w-[min(18rem,88vw)] max-w-[288px] flex-col bg-bee-black text-white shadow-none transition-transform duration-300 ease-out lg:z-40 ${
+        mobileOpen
+          ? 'translate-x-0 shadow-2xl lg:shadow-none'
+          : '-translate-x-full lg:translate-x-0'
+      }`}
+    >
       {/* Logo */}
-      <div className="px-6 py-6 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
-            <span className="text-black font-extrabold text-lg tracking-tight">V+</span>
+      <div className="flex items-start justify-between gap-2 border-b border-white/10 px-4 py-5 sm:px-6 sm:py-6">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-500">
+            <span className="text-lg font-extrabold tracking-tight text-black">V+</span>
           </div>
-          <div>
-            <h1 className="text-lg font-bold tracking-tight text-white">
+          <div className="min-w-0">
+            <h1 className="text-base font-bold tracking-tight text-white sm:text-lg">
               Volunteer<span className="text-primary-400">+</span>
             </h1>
             <p className="text-xs text-neutral-500">
@@ -47,6 +65,14 @@ export default function Sidebar() {
             </p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => onClose?.()}
+          className="rounded-lg p-2 text-neutral-400 hover:bg-white/10 hover:text-white lg:hidden"
+          aria-label="Закрыть меню"
+        >
+          <X size={22} strokeWidth={2} />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -58,6 +84,7 @@ export default function Sidebar() {
               key={item.to}
               to={item.to}
               end={item.to === '/'}
+              onClick={() => onClose?.()}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive
