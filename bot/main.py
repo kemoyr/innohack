@@ -28,8 +28,9 @@ if __name__ == "__main__":
     try:
         asyncio.run(_init_db())
         app = create_app(None)
-        logger.info("Starting site: http://0.0.0.0:8000 (API + статика)")
-        uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+        port = int(os.environ.get("PORT", "8000"))
+        logger.info("Starting site on 0.0.0.0:%s (API + статика)", port)
+        uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
     except KeyboardInterrupt:
         logger.info("Shutting down...")
     except Exception as e:

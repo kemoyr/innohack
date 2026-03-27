@@ -1,0 +1,11 @@
+.git
+.cursor
+**/__pycache__
+*.py[cod]
+.venv
+venv
+.env
+*.md
+frontend/node_modules
+data/*.db
+*.log

@@ -1,63 +1,67 @@
 # Деплой на Railway
 
-## Шаг 1: Загрузить код на GitHub
+Стек: **Dockerfile** (сборка React + Python), один сервис, порт из переменной **`PORT`** (Railway подставляет сам).
 
-```bash
-# В папке проекта
-git init
-git add .
-git commit -m "ready for railway deploy"
+## 1. Код в GitHub
 
-# Создать репо на github.com, затем:
-git remote add origin https://github.com/ВАШ_ЛОГИН/ВАШ_РЕПО.git
-git push -u origin main
-```
+Репозиторий должен быть на GitHub (ветка, с которой деплоитесь — обычно `main`).
 
-## Шаг 2: Создать проект на Railway
+## 2. Новый проект в Railway
 
-1. Зайти на https://railway.app
-2. **New Project** → **Deploy from GitHub repo**
-3. Выбрать ваш репозиторий
-4. Railway автоматически найдёт Dockerfile и начнёт сборку
+1. Откройте [railway.app](https://railway.app) → войдите через GitHub.
+2. **New project** → **Deploy from GitHub repo**.
+3. Выберите репозиторий `beeline-2026-new` (или ваш форк).
+4. Railway подхватит **`railway.json`** и соберёт образ по **Dockerfile** (это может занять несколько минут).
 
-## Шаг 3: Добавить переменные окружения
+## 3. Переменные окружения (Variables)
 
-В Railway: Settings → Variables → добавить:
+В сервисе: **Variables** → **Add variable**.
 
-| Переменная | Значение |
-|---|---|
-| `BOT_TOKEN` | токен от @BotFather |
-| `ADMIN_PASSWORD` | ваш пароль |
-| `SECRET_KEY` | любая длинная случайная строка |
-| `DB_PATH` | `/data/volunteer.db` |
-| `DEMO_MODE` | `true` |
+| Переменная        | Обязательно | Пример / комментарий |
+|-------------------|------------|----------------------|
+| `SECRET_KEY`      | да         | Длинная случайная строка (JWT). |
+| `ADMIN_PASSWORD`  | да*        | Пароль координатора в боте (если используете бота). |
+| `BOT_TOKEN`       | нет        | Токен @BotFather; для **только веб** можно пусто или заглушка. |
+| `DB_PATH`         | да (прод)  | **`/data/volunteer.db`** — вместе с томом ниже. |
+| `DEMO_MODE`       | опционально| `true` / `false`. |
+| `WEBAPP_URL`      | опционально| Публичный URL после шага 5, например `https://xxx.up.railway.app`. |
 
-## Шаг 4: Добавить персистентный диск (важно!)
+`PORT` **не задавайте вручную** — его выставляет Railway.
 
-Без диска SQLite сбросится при каждом рестарте.
+## 4. Персистентный диск (обязательно для SQLite)
 
-1. В Railway: ваш сервис → **Volumes**
-2. **Add Volume**
-3. Mount path: `/data`
-4. Сохранить
+Иначе база будет обнуляться при каждом деплое/рестарте.
 
-## Шаг 5: Получить URL
+1. Откройте **сервис** (не корень проекта, если сервисов несколько).
+2. Вкладка **Volumes** (или **Settings → Volume** в зависимости от UI).
+3. **Add volume** → mount path: **`/data`**.
+4. Перезапустите деплой, если сервис уже был запущен без тома.
 
-После деплоя:
-1. Settings → Networking → **Generate Domain**
-2. Скопировать URL (например `volunteer-plus.railway.app`)
-3. Добавить в переменные: `WEBAPP_URL=https://volunteer-plus.railway.app`
+## 5. Публичный URL
 
-## Готово!
+1. **Settings** → **Networking** → **Generate domain** (или привязка своего домена).
+2. Скопируйте URL и при желании добавьте переменную **`WEBAPP_URL`** с этим значением.
 
-- Сайт: `https://volunteer-plus.railway.app`
-- API docs: `https://volunteer-plus.railway.app/docs`
-- Бот в Telegram работает автоматически
+Проверка:
 
-## Демо-данные
+- Сайт: `https://<ваш-домен>/`
+- API: `https://<ваш-домен>/api/stats`
+- Swagger: `https://<ваш-домен>/docs`
 
-При первом запуске бот автоматически засеет демо-данные (10 волонтёров, 8 мероприятий).
+Healthcheck в `railway.json` бьёт в **`/api/stats`**.
 
-Логин для дашборда:
-- Email: `coordinator@example.com`
-- Пароль: `demo123`
+## 6. Первый вход (демо)
+
+Если база пустая, при старте подставляются демо-данные из `init_db()`:
+
+- Email: **`coordinator@example.com`**
+- Пароль: **`demo123`**
+
+## Типичные проблемы
+
+| Симптом | Что сделать |
+|--------|-------------|
+| Build failed | **Deployments** → открыть лог сборки; часто нехватка памяти на бесплатном плане — повторить деплой или апгрейд. |
+| Crash / не слушает порт | Убедиться, что приложение использует **`PORT`** из окружения (в этом репозитории уже так в `bot/main.py`). |
+| Пустая БД после рестарта | Не смонтирован том **`/data`** или неверный **`DB_PATH`**. |
+| 404 на `/ratings` и т.п. | Должен отдаваться собранный фронт из `frontend/dist` в образе; при локальной правке фронта нужен новый push и redeploy. |
