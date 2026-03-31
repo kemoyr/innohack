@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { CalendarDays, Clock, CheckCircle2, Plus, Loader2, XCircle, X } from 'lucide-react';
-import api from '../api';
+import { Link } from 'react-router-dom';
+import { CalendarDays, Clock, CheckCircle2, Plus, Loader2, X, LogIn } from 'lucide-react';
+import api, { getToken } from '../api';
 import EventCard from '../components/EventCard';
 
 function groupByMonth(events) {
@@ -27,6 +28,7 @@ export default function Calendar() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('all');
   const [showCreate, setShowCreate] = useState(false);
+  const isLoggedIn = !!getToken();
   const [creating, setCreating] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -50,6 +52,10 @@ export default function Calendar() {
 
   async function handleCreateEvent(e) {
     e.preventDefault();
+    if (!getToken()) {
+      window.location.href = '/login';
+      return;
+    }
     setCreating(true);
     try {
       const newEvent = await api.createEvent(formData);
@@ -103,13 +109,24 @@ export default function Calendar() {
             Все мероприятия ({events.length})
           </p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 text-black rounded-xl text-sm font-bold hover:bg-primary-400 shadow-sm shadow-primary-500/25 transition-all duration-200"
-        >
-          <Plus size={16} />
-          <span>Создать мероприятие</span>
-        </button>
+        {isLoggedIn ? (
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 text-black rounded-xl text-sm font-bold hover:bg-primary-400 shadow-sm shadow-primary-500/25 transition-all duration-200"
+          >
+            <Plus size={16} />
+            <span>Создать мероприятие</span>
+          </button>
+        ) : (
+          <Link
+            to="/login"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50 transition-all"
+          >
+            <LogIn size={16} />
+            <span>Войти, чтобы создать</span>
+          </Link>
+        )}
       </div>
 
       {/* Stats Row */}

@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 
 from bot.database import (
     get_all_volunteers,
+    get_volunteer_by_id,
     get_volunteer_submissions,
     get_volunteer_points_history,
     get_achievements,
@@ -10,9 +11,31 @@ from bot.database import (
     toggle_volunteer_status,
     get_volunteer_reviews,
 )
-from bot.api.routes.auth import get_current_coordinator
+from bot.api.routes.auth import get_current_coordinator, get_optional_user
 
 router = APIRouter(tags=["volunteers"])
+
+_SENSITIVE_VOLUNTEER_KEYS = frozenset({"password_hash"})
+_PUBLIC_STATUSES = frozenset({"planned", "completed", "cancelled"})
+
+
+def _strip_sensitive(vol: dict) -> dict:
+    if not vol:
+        return vol
+    return {k: v for k, v in vol.items() if k not in _SENSITIVE_VOLUNTEER_KEYS}
+
+
+def _public_volunteer_shell(vol: dict) -> dict:
+    """Поля профиля без контактов и внутренних данных (для гостей и других волонтёров)."""
+    return {
+        "id": vol["id"],
+        "full_name": vol.get("full_name"),
+        "city": vol.get("city") or "",
+        "points": vol.get("points") or 0,
+        "status": vol.get("status"),
+        "role": vol.get("role"),
+        "created_at": vol.get("created_at"),
+    }
 
 
 def _build_activity_reports(submissions: list, points_history: list, event_map: dict) -> list:
@@ -74,7 +97,8 @@ def _build_activity_reports(submissions: list, points_history: list, event_map: 
 
 
 @router.get("/volunteers")
-async def list_volunteers():
+async def list_volunteers(coordinator=Depends(get_current_coordinator)):
+    """Полный реестр — только координатор (телефоны, telegram и т.д.)."""
     volunteers = await get_all_volunteers()
     result = []
     for v in volunteers:
@@ -96,33 +120,41 @@ async def list_volunteers():
 
 
 @router.get("/volunteers/{volunteer_id}")
-async def get_volunteer_detail(volunteer_id: int):
-    volunteers = await get_all_volunteers()
-    vol = None
-    for v in volunteers:
-        if v["id"] == volunteer_id:
-            vol = v
-            break
-
+async def get_volunteer_detail(volunteer_id: int, user=Depends(get_optional_user)):
+    vol = await get_volunteer_by_id(volunteer_id)
     if not vol:
         raise HTTPException(status_code=404, detail="Volunteer not found")
 
-    submissions = await get_volunteer_submissions(volunteer_id)
-    points_history = await get_volunteer_points_history(volunteer_id)
     achievements = await get_achievements(volunteer_id)
     reviews = await get_volunteer_reviews(volunteer_id)
     created_events = await get_events_by_creator(volunteer_id)
 
-    events = await get_all_events()
-    event_map = {e["id"]: e["title"] for e in events}
-    activity_reports = _build_activity_reports(submissions, points_history, event_map)
+    is_coordinator = bool(user and user.get("role") == "coordinator")
+    is_self = bool(user and user.get("user_id") == volunteer_id)
 
+    if is_coordinator or is_self:
+        submissions = await get_volunteer_submissions(volunteer_id)
+        points_history = await get_volunteer_points_history(volunteer_id)
+        events = await get_all_events()
+        event_map = {e["id"]: e["title"] for e in events}
+        activity_reports = _build_activity_reports(submissions, points_history, event_map)
+        return {
+            **_strip_sensitive(vol),
+            "activity_reports": activity_reports,
+            "created_events": created_events,
+            "achievements": achievements,
+            "reviews": reviews,
+            "profile_scope": "full",
+        }
+
+    public_events = [e for e in created_events if e.get("status") in _PUBLIC_STATUSES]
     return {
-        **vol,
-        "activity_reports": activity_reports,
-        "created_events": created_events,
+        **_public_volunteer_shell(vol),
+        "activity_reports": [],
+        "created_events": public_events,
         "achievements": achievements,
         "reviews": reviews,
+        "profile_scope": "public",
     }
 
 
@@ -136,13 +168,6 @@ async def toggle_status(
     if new_status is None:
         raise HTTPException(status_code=404, detail="Volunteer not found")
 
-    # Fetch updated volunteer info for the response
-    volunteers = await get_all_volunteers()
-    vol = None
-    for v in volunteers:
-        if v["id"] == volunteer_id:
-            vol = v
-            break
-
+    vol = await get_volunteer_by_id(volunteer_id)
     full_name = vol["full_name"] if vol else ""
     return {"id": volunteer_id, "status": new_status, "full_name": full_name}

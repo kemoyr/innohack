@@ -77,6 +77,13 @@ async def create_new_event(
     user=Depends(get_current_user),
 ):
     """Create event. Coordinators create planned events directly. Volunteers create pending ones."""
+    uid = user.get("user_id")
+    if uid is None:
+        raise HTTPException(status_code=401, detail="Недействительный токен")
+    vol = await get_volunteer_by_id(uid)
+    if not vol:
+        raise HTTPException(status_code=401, detail="Пользователь не найден")
+
     if user["role"] == "coordinator":
         code = generate_event_code()
         event_id = await create_event(

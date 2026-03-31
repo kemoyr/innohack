@@ -105,6 +105,12 @@ async def upload_verification(
 @router.get("/events/{event_id}/verification")
 async def get_verification_status(event_id: int, user=Depends(get_current_user)):
     """Get verification status for an event."""
+    event = await get_event_by_id(event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Мероприятие не найдено")
+    if user["role"] != "coordinator" and event.get("created_by") != user["user_id"]:
+        raise HTTPException(status_code=403, detail="Нет доступа")
+
     ver = await get_event_verification(event_id)
     if not ver:
         return {"verified": False, "verification": None}

@@ -31,7 +31,11 @@ function authHeaders() {
   return headers;
 }
 
-async function request(method, path, body = null) {
+async function request(method, path, body = null, { requireAuth = true } = {}) {
+  if (requireAuth && !getToken()) {
+    window.location.href = '/login';
+    throw new Error('Требуется вход');
+  }
   const options = {
     method,
     headers: authHeaders(),
@@ -127,7 +131,7 @@ const api = {
   getMyApplications: () => request('GET', '/api/events/my/applications'),
   getMyApplication: (eventId) => request('GET', `/api/events/${eventId}/my-application`),
   getMyReview: (eventId) => request('GET', `/api/events/${eventId}/my-review`),
-  getEventApplications: (eventId) => request('GET', `/api/events/${eventId}/applications`),
+  getEventApplications: (eventId) => publicRequest('GET', `/api/events/${eventId}/applications`),
 
   // Reviews
   reviewEvent: (eventId, data) => request('POST', `/api/events/${eventId}/review`, data),

@@ -101,6 +101,7 @@ export default function VolunteerDetail() {
   const createdEvents = volunteer.created_events || [];
   const achievements = volunteer.achievements || [];
   const reviews = volunteer.reviews || [];
+  const isPublicProfile = volunteer.profile_scope === 'public';
 
   return (
     <div className="space-y-6">
@@ -115,6 +116,11 @@ export default function VolunteerDetail() {
 
       {/* Profile Header */}
       <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
+        {isPublicProfile && (
+          <div className="mb-4 rounded-xl border border-neutral-200/80 bg-neutral-50 px-4 py-3 text-xs text-neutral-600 leading-relaxed">
+            Открытый профиль: контакты, детальные отчёты и мероприятия на модерации не показываются. Полные данные видны владельцу после входа и координатору.
+          </div>
+        )}
         <div className="flex items-start gap-5">
           <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center text-primary-800 text-xl font-bold shrink-0">
             {volunteer.full_name?.charAt(0)?.toUpperCase() || '?'}
@@ -171,7 +177,9 @@ export default function VolunteerDetail() {
             <p className="text-2xl font-bold text-neutral-900">{volunteer.points || 0}</p>
             <p className="text-xs text-neutral-500 mt-0.5">Баллов</p>
             <p className="text-[10px] text-neutral-400 mt-1 px-1 leading-snug max-w-[200px] mx-auto">
-              Разбивка — в блоке «Отчёты» ниже
+              {isPublicProfile
+                ? 'Детальная разбивка — только для владельца'
+                : 'Разбивка — в блоке «Отчёты» ниже'}
             </p>
           </div>
           <div className="text-center">

@@ -1,3 +1,52 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+```bash
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Build frontend
+cd frontend && npm install && npm run build && cd ..
+
+# Frontend dev server (hot reload, proxies API to :8000)
+cd frontend && npm run dev
+
+# Seed demo data (10 volunteers, 8 events, points, achievements)
+python demo_data.py
+
+# Run the application (FastAPI + built frontend at http://localhost:8000)
+python bot/main.py
+
+# One-command setup + run
+chmod +x setup.sh && ./setup.sh
+
+# Docker build
+docker build -t volunteer-plus .
+docker run -p 8000:8000 -e BOT_TOKEN=... -e ADMIN_PASSWORD=... volunteer-plus
+```
+
+### Environment variables (`.env`)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `BOT_TOKEN` | — | Telegram bot token from @BotFather |
+| `ADMIN_PASSWORD` | `admin123` | Coordinator password for bot + web login |
+| `SECRET_KEY` | `hackathon-secret-key` | JWT signing key |
+| `DB_PATH` | `./data/volunteer.db` | SQLite file path (set `/data/volunteer.db` in prod) |
+| `DEMO_MODE` | `true` | Enables demo data endpoints |
+| `WEBAPP_URL` | — | Public URL sent by bot for dashboard link |
+
+---
+
+## Key architectural note: `bot/main.py` current state
+
+`bot/main.py` currently **only starts FastAPI/uvicorn** — it does not launch the Telegram bot dispatcher. The aiogram handlers in `bot/handlers/` are implemented but not wired into the running process. To re-enable the Telegram bot, connect the aiogram `Dispatcher` and `Bot` instances inside `main.py` alongside uvicorn.
+
+---
+
 # Волонтёр+ (VolunteerPlus)
 
 **Продукт:** Волонтёр+ — платформа верификации волонтёрских мероприятий и координации команд.
@@ -82,17 +131,20 @@ beeline/
 │   │   ├── exif.py             # EXIF extraction (timestamp, GPS) via Pillow
 │   │   ├── geo.py              # Haversine distance, geo validation (500m threshold)
 │   │   ├── face.py             # Face detection via OpenCV Haar cascade
-│   │   └── qr.py               # QR generation (qrcode lib) + QR reading (OpenCV)
+│   │   ├── qr.py               # QR generation (qrcode lib) + QR reading (OpenCV)
+│   │   └── ai_moderation.py    # AI-based photo moderation (ai_score, ai_reasons)
 │   │
 │   └── api/
 │       ├── __init__.py
-│       ├── app.py              # FastAPI app factory, CORS, static files
+│       ├── app.py              # FastAPI app factory, CORS, SPA static file serving
 │       └── routes/
 │           ├── __init__.py
-│           ├── auth.py         # POST /api/auth/login (coordinator JWT)
+│           ├── auth.py         # POST /api/auth/login (coordinator JWT), POST /api/auth/register
 │           ├── volunteers.py   # GET /api/volunteers, GET /api/volunteers/:id
 │           ├── events.py       # GET/POST/PATCH /api/events
-│           └── stats.py        # GET /api/stats, /api/leaderboard, /api/achievements
+│           ├── stats.py        # GET /api/stats, /api/leaderboard, /api/achievements
+│           ├── verification.py # POST /api/events/:id/verify (photo+GPS verification)
+│           └── applications.py # GET/POST /api/events/:id/applications (event sign-ups)
 │
 ├── frontend/
 │   ├── package.json
@@ -121,78 +173,36 @@ beeline/
 
 ### Database schema
 
+The actual schema is defined in `bot/database.py:init_db()`. Key differences from the original spec:
+
+- `volunteers` has additional columns: `email TEXT UNIQUE`, `password_hash TEXT` (for web login)
+- `events` has additional columns: `created_by INTEGER REFERENCES volunteers(id)`, `moderation_note TEXT`; status enum expanded to include `'pending'` and `'rejected'`
+- New tables added beyond the original spec:
+
+```
+event_verifications  — per-event photo/GPS submissions with AI scoring fields
+                       (ai_score, ai_approved, ai_reasons, coordinator_decision)
+event_applications   — volunteer sign-ups for events (pending/approved/rejected)
+event_reviews        — post-event ratings (1–5 stars + comment) from volunteers
+```
+
 ```sql
-CREATE TABLE IF NOT EXISTS volunteers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    telegram_id INTEGER UNIQUE NOT NULL,
-    username TEXT DEFAULT '',
-    full_name TEXT NOT NULL,
-    city TEXT DEFAULT '',
-    phone TEXT DEFAULT '',
-    role TEXT DEFAULT 'volunteer' CHECK(role IN ('volunteer', 'coordinator')),
-    status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
-    points INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    description TEXT DEFAULT '',
-    location_name TEXT DEFAULT '',
-    location_lat REAL,
-    location_lon REAL,
-    scheduled_date TEXT,
-    status TEXT DEFAULT 'planned' CHECK(status IN ('planned', 'completed', 'cancelled')),
-    qr_code TEXT UNIQUE,
-    coordinator_id INTEGER REFERENCES volunteers(id),
-    attendance_count INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS submissions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    volunteer_id INTEGER NOT NULL REFERENCES volunteers(id),
-    event_id INTEGER REFERENCES events(id),
-    location_lat REAL,
-    location_lon REAL,
-    photo_count INTEGER DEFAULT 0,
-    selfie_verified INTEGER DEFAULT 0,
-    geo_verified INTEGER DEFAULT 0,
-    exif_verified INTEGER DEFAULT 0,
-    qr_verified INTEGER DEFAULT 0,
-    qr_code TEXT,
-    points_awarded INTEGER DEFAULT 0,
-    status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'verified', 'rejected')),
-    rejection_reason TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS achievements (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    volunteer_id INTEGER NOT NULL REFERENCES volunteers(id),
-    badge_type TEXT NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT DEFAULT '',
-    created_at TEXT DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS points_history (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    volunteer_id INTEGER NOT NULL REFERENCES volunteers(id),
-    amount INTEGER NOT NULL,
-    reason TEXT DEFAULT '',
-    submission_id INTEGER REFERENCES submissions(id),
-    created_at TEXT DEFAULT (datetime('now'))
-);
-
--- Indexes
-CREATE INDEX IF NOT EXISTS idx_volunteers_telegram_id ON volunteers(telegram_id);
-CREATE INDEX IF NOT EXISTS idx_submissions_volunteer_id ON submissions(volunteer_id);
-CREATE INDEX IF NOT EXISTS idx_submissions_event_id ON submissions(event_id);
-CREATE INDEX IF NOT EXISTS idx_events_qr_code ON events(qr_code);
-CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
-CREATE INDEX IF NOT EXISTS idx_points_history_volunteer_id ON points_history(volunteer_id);
+-- Core tables (abbreviated — see bot/database.py for full DDL)
+volunteers(id, telegram_id, username, full_name, city, phone, email, password_hash,
+           role, status, points, created_at)
+events(id, title, description, location_name, location_lat, location_lon,
+       scheduled_date, status, qr_code, coordinator_id, created_by,
+       moderation_note, attendance_count, created_at)
+event_verifications(id, event_id, volunteer_id, photo_paths, volunteer_comment,
+                    location_lat, location_lon, ai_score, ai_approved, ai_reasons,
+                    coordinator_decision, coordinator_comment, created_at)
+submissions(id, volunteer_id, event_id, location_lat, location_lon, photo_count,
+            selfie_verified, geo_verified, exif_verified, qr_verified, qr_code,
+            points_awarded, status, rejection_reason, created_at)
+event_applications(id, event_id, volunteer_id, full_name, email, phone, status, created_at)
+event_reviews(id, event_id, volunteer_id, rating, comment, created_at)
+achievements(id, volunteer_id, badge_type, title, description, created_at)
+points_history(id, volunteer_id, amount, reason, submission_id, created_at)
 ```
 
 ### Data flow: volunteer submission → points
