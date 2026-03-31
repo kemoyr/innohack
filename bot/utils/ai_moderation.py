@@ -6,16 +6,20 @@ Scoring system (0–100 points):
   Block 1 — EXIF timestamp ≤ 2h              25 pts (proportional across photos)
   Block 2 — EXIF GPS matches submitted loc    20 pts (proportional)
   Block 3 — Face detected (selfie check)      15 pts + 5 bonus if ≥3 faces
-  Block 4 — Blur: Laplacian variance > 80     10 pts (full/half/none)
-  Block 5 — Resolution ≥ 320×240              5 pts
-  Block 6 — Photo count 2–3                   5 pts
+  Block 4 — CLIP event classifier             15 pts (full=15, partial=7, none=0)
+  Block 5 — Blur: Laplacian variance > 80     10 pts (full/half/none)
+  Block 6 — Resolution ≥ 320×240              5 pts
+  Block 7 — Photo count 2–3                   5 pts
   ─────────────────────────────────────────────────────
-  Max without bonus                           80 pts
-  Max with audience bonus                     85 pts
+  Max without bonus (no CLIP weights)         85 pts
+  Max with CLIP + audience bonus             100 pts
 
   ≥ 80 → auto-approved
   50–79 → coordinator queue
   < 50  → coordinator queue + high_risk flag
+
+  Block 4 (CLIP) is optional: if bot/models/clip_event_classifier.pt is absent,
+  the block is skipped and max reachable score stays at 85 pts.
 """
 import logging
 
@@ -24,6 +28,7 @@ import cv2
 from bot.utils.exif import extract_exif, is_recent
 from bot.utils.face import detect_faces
 from bot.utils.geo import haversine
+from bot.utils.clip_classifier import classify_event_photo
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +130,8 @@ def run_moderation(
     res_pass = 0
     has_face = False
     max_face_count = 0
+    clip_prob_sum = 0.0
+    clip_checked = 0
 
     for i, path in enumerate(photo_paths):
         photo_num = i + 1
@@ -158,14 +165,26 @@ def run_moderation(
             exif_gps_pass += 1
             exif_gps_checked += 1
 
-        # Block 4: Blur
+        # Block 4: CLIP event classifier (optional — needs trained weights)
+        clip_result = classify_event_photo(path)
+        if clip_result["available"]:
+            clip_prob_sum += clip_result["event_probability"]
+            clip_checked += 1
+            if not clip_result["is_event"]:
+                p = clip_result["event_probability"]
+                reasons.append(
+                    f"Фото #{photo_num}: CLIP не распознал мероприятие "
+                    f"(вероятность: {p:.0%})"
+                )
+
+        # Block 5: Blur
         is_sharp, blur_var = analyze_blur(path)
         if is_sharp:
             blur_pass += 1
         else:
             reasons.append(f"Фото #{photo_num}: размытое (резкость: {blur_var:.0f}, мин. 80)")
 
-        # Block 5: Resolution
+        # Block 6: Resolution
         res_ok, res_size = analyze_resolution(path)
         if res_ok:
             res_pass += 1
@@ -205,21 +224,41 @@ def run_moderation(
         reasons.append("Селфи не обнаружено — на фотографиях не найдено лиц")
         details["faces"] = {"found": False, "max_count": 0, "pts": 0}
 
-    # ── Block 4: Blur (10 pts: all sharp=10, half=5, less=0) ────────────────
+    # ── Block 4: CLIP event classifier (15 pts, proportional + partial) ─────
+    if clip_checked > 0:
+        avg_prob = clip_prob_sum / clip_checked
+        if avg_prob >= 0.5:
+            block4_clip = 15
+        elif avg_prob >= 0.3:
+            block4_clip = 7   # частичный балл: сцена неоднозначна
+        else:
+            block4_clip = 0
+        score += block4_clip
+        details["clip"] = {
+            "available": True,
+            "avg_event_probability": round(avg_prob, 3),
+            "checked": clip_checked,
+            "pts": block4_clip,
+        }
+    else:
+        # Модель не загружена — блок пропускается, не штрафуем
+        details["clip"] = {"available": False, "pts": 0}
+
+    # ── Block 5: Blur (10 pts: all sharp=10, half=5, less=0) ────────────────
     blur_ratio = blur_pass / n
     if blur_ratio >= 1.0:
-        block4 = 10
+        block5_blur = 10
     elif blur_ratio >= 0.5:
-        block4 = 5
+        block5_blur = 5
     else:
-        block4 = 0
-    score += block4
-    details["blur"] = {"sharp": blur_pass, "total": n, "pts": block4}
+        block5_blur = 0
+    score += block5_blur
+    details["blur"] = {"sharp": blur_pass, "total": n, "pts": block5_blur}
 
-    # ── Block 5: Resolution (5 pts: all pass=5, else=0) ─────────────────────
-    block5 = 5 if res_pass == n else 0
-    score += block5
-    details["resolution"] = {"ok": res_pass == n, "passed": res_pass, "total": n, "pts": block5}
+    # ── Block 6: Resolution (5 pts: all pass=5, else=0) ─────────────────────
+    block6_res = 5 if res_pass == n else 0
+    score += block6_res
+    details["resolution"] = {"ok": res_pass == n, "passed": res_pass, "total": n, "pts": block6_res}
 
     details["total_score"] = score
 
