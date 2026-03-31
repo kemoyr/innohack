@@ -14,7 +14,3 @@ venv/
 # Hugging Face / datasets cache (Arrow — сотни МБ, не коммитить)
 .hf_cache/
 
-# ML model weights (large binary files, download from Kaggle)
-bot/models/*.pt
-bot/models/*.bin
-notebooks/*.pt
