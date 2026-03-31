@@ -8,3 +8,4 @@ qrcode[pil]==8.0
 pyjwt==2.10.1
 python-dotenv==1.0.1
 python-multipart==0.0.20
+mediapipe>=0.10.0

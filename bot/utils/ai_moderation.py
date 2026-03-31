@@ -1,13 +1,28 @@
 """AI moderation pipeline for event verification.
 
 Analyzes uploaded photos and geolocation to auto-approve or flag for coordinator review.
+
+Scoring system (0–100 points):
+  Block 1 — EXIF timestamp ≤ 2h              25 pts (proportional across photos)
+  Block 2 — EXIF GPS matches submitted loc    20 pts (proportional)
+  Block 3 — Face detected (selfie check)      15 pts + 5 bonus if ≥3 faces
+  Block 4 — Blur: Laplacian variance > 80     10 pts (full/half/none)
+  Block 5 — Resolution ≥ 320×240              5 pts
+  Block 6 — Photo count 2–3                   5 pts
+  ─────────────────────────────────────────────────────
+  Max without bonus                           80 pts
+  Max with audience bonus                     85 pts
+
+  ≥ 80 → auto-approved
+  50–79 → coordinator queue
+  < 50  → coordinator queue + high_risk flag
 """
 import logging
-import random
 
 import cv2
 
-from bot.utils.face import detect_face
+from bot.utils.exif import extract_exif, is_recent
+from bot.utils.face import detect_faces
 from bot.utils.geo import haversine
 
 logger = logging.getLogger(__name__)
@@ -52,33 +67,11 @@ def analyze_geolocation(lat: float, lon: float) -> dict:
         valid = False
         reasons.append("Координаты вне допустимого диапазона")
 
-    # Check for null island (0,0)
     if abs(lat) < 0.01 and abs(lon) < 0.01:
         valid = False
         reasons.append("Координаты указывают на нулевой остров (0,0)")
 
     return {"valid": valid, "reasons": reasons}
-
-
-def analyze_text(title: str, description: str = "") -> dict:
-    """Validate event title and description quality."""
-    reasons = []
-    score = 1.0
-
-    if len(title.strip()) < 3:
-        reasons.append("Название слишком короткое (мин. 3 символа)")
-        score -= 0.5
-
-    if len(title.strip()) > 200:
-        reasons.append("Название слишком длинное")
-        score -= 0.2
-
-    # Check for excessive caps
-    if title.isupper() and len(title) > 5:
-        reasons.append("Название написано КАПСОМ")
-        score -= 0.1
-
-    return {"score": max(score, 0), "reasons": reasons}
 
 
 def run_moderation(
@@ -90,104 +83,165 @@ def run_moderation(
     demo_mode: bool = True,
 ) -> dict:
     """
-    Run full AI moderation pipeline.
+    Run full moderation pipeline.
 
     Returns:
         {
             "approved": bool,
-            "score": float (0-1),
-            "reasons": list[str],  # rejection reasons
-            "details": dict,       # per-check results
+            "score": int (0–100),
+            "confidence_percent": int (0–100),
+            "reasons": list[str],
+            "details": dict,
+            "high_risk": bool,
         }
     """
-    reasons = []
-    details = {}
-    total_score = 0.0
-    checks = 0
-
-    # 1. Photo analysis
-    photo_scores = []
-    has_any_face = False
-    for i, path in enumerate(photo_paths):
-        is_sharp, blur_var = analyze_blur(path)
-        res_ok, res_size = analyze_resolution(path)
-        has_face = detect_face(path)
-
-        if has_face:
-            has_any_face = True
-
-        photo_score = 0.0
-        if is_sharp:
-            photo_score += 0.4
-        else:
-            reasons.append(f"Фото #{i+1}: размытое (резкость: {blur_var:.0f})")
-        if res_ok:
-            photo_score += 0.3
-        else:
-            reasons.append(f"Фото #{i+1}: слишком маленькое разрешение {res_size}")
-        if has_face:
-            photo_score += 0.3
-
-        photo_scores.append(photo_score)
-
-    if photo_paths:
-        avg_photo = sum(photo_scores) / len(photo_scores)
-        total_score += avg_photo
-        checks += 1
-        details["photos"] = {
-            "count": len(photo_paths),
-            "avg_score": round(avg_photo, 2),
-            "has_face": has_any_face,
-        }
-    else:
-        reasons.append("Фотографии не загружены")
-        details["photos"] = {"count": 0, "avg_score": 0, "has_face": False}
-
-    # 2. Geolocation analysis
-    geo = analyze_geolocation(lat, lon)
-    if geo["valid"]:
-        total_score += 1.0
-    else:
-        reasons.extend(geo["reasons"])
-    checks += 1
-    details["geo"] = geo
-
-    # 3. Text analysis
-    text = analyze_text(title, description)
-    total_score += text["score"]
-    checks += 1
-    if text["reasons"]:
-        reasons.extend(text["reasons"])
-    details["text"] = text
-
-    # Справочный «классический» скор в details (не влияет на решение)
-    heuristic_score = total_score / max(checks, 1)
-    details["heuristic_score"] = round(heuristic_score, 2)
-
     if not photo_paths:
         return {
             "approved": False,
-            "score": 0.0,
+            "score": 0,
             "confidence_percent": 0,
-            "reasons": reasons if reasons else ["Фотографии не загружены"],
-            "details": details,
+            "reasons": ["Фотографии не загружены"],
+            "details": {},
+            "high_risk": True,
         }
 
-    # Уверенность модели (справочно); решение всегда за координатором
-    pct = random.randint(30, 100)
-    final_score = pct / 100.0
-    details["confidence_percent"] = pct
-    details["demo_mode"] = demo_mode
+    score = 0
+    reasons: list[str] = []
+    details: dict = {}
+    n = len(photo_paths)
 
-    verdict = [
-        f"Уверенность модели: {pct}%",
-        "Мероприятие отправлено на проверку координатору.",
-    ]
+    # ── Block 6: Photo count (5 pts) ────────────────────────────────────────
+    if 2 <= n <= 3:
+        score += 5
+    else:
+        reasons.append(f"Загружено {n} фото (требуется 2–3)")
+    details["photo_count"] = {"count": n, "ok": 2 <= n <= 3}
+
+    # ── Per-photo checks ─────────────────────────────────────────────────────
+    exif_time_pass = 0
+    exif_gps_pass = 0
+    exif_gps_checked = 0
+    blur_pass = 0
+    res_pass = 0
+    has_face = False
+    max_face_count = 0
+
+    for i, path in enumerate(photo_paths):
+        photo_num = i + 1
+
+        # Block 1: EXIF timestamp
+        exif = extract_exif(path)
+        if exif["datetime"]:
+            if is_recent(exif["datetime"], max_hours=2):
+                exif_time_pass += 1
+            else:
+                reasons.append(f"Фото #{photo_num}: снято более 2 часов назад")
+        else:
+            reasons.append(f"Фото #{photo_num}: нет EXIF-метки времени")
+
+        # Block 2: EXIF GPS vs submitted location
+        if lat is not None and lon is not None:
+            if exif["lat"] is not None and exif["lon"] is not None:
+                exif_gps_checked += 1
+                dist = haversine(exif["lat"], exif["lon"], lat, lon)
+                if dist <= 500:
+                    exif_gps_pass += 1
+                else:
+                    reasons.append(
+                        f"Фото #{photo_num}: GPS в EXIF отличается на {dist:.0f} м "
+                        f"от указанной точки (макс. 500 м)"
+                    )
+            else:
+                reasons.append(f"Фото #{photo_num}: нет GPS в EXIF")
+        else:
+            # No submitted location — skip GPS check, give benefit of the doubt
+            exif_gps_pass += 1
+            exif_gps_checked += 1
+
+        # Block 4: Blur
+        is_sharp, blur_var = analyze_blur(path)
+        if is_sharp:
+            blur_pass += 1
+        else:
+            reasons.append(f"Фото #{photo_num}: размытое (резкость: {blur_var:.0f}, мин. 80)")
+
+        # Block 5: Resolution
+        res_ok, res_size = analyze_resolution(path)
+        if res_ok:
+            res_pass += 1
+        else:
+            reasons.append(f"Фото #{photo_num}: слишком малое разрешение {res_size[0]}×{res_size[1]}")
+
+        # Block 3: Face detection
+        face = detect_faces(path)
+        if face["found"]:
+            has_face = True
+            max_face_count = max(max_face_count, face["count"])
+
+    # ── Block 1: EXIF timestamp score (25 pts, proportional) ────────────────
+    block1 = round((exif_time_pass / n) * 25)
+    score += block1
+    details["exif_timestamp"] = {"passed": exif_time_pass, "total": n, "pts": block1}
+
+    # ── Block 2: EXIF GPS score (20 pts, proportional) ──────────────────────
+    if exif_gps_checked > 0:
+        block2 = round((exif_gps_pass / exif_gps_checked) * 20)
+    else:
+        block2 = 0
+    score += block2
+    details["exif_gps"] = {"passed": exif_gps_pass, "checked": exif_gps_checked, "pts": block2}
+
+    # ── Block 3: Face detection (15 pts + 5 audience bonus) ─────────────────
+    if has_face:
+        face_pts = 15
+        if max_face_count >= 3:
+            face_pts += 5
+            reasons_face = f"Обнаружено лиц: {max_face_count} (бонус за аудиторию)"
+        else:
+            reasons_face = f"Обнаружено лиц: {max_face_count}"
+        score += face_pts
+        details["faces"] = {"found": True, "max_count": max_face_count, "pts": face_pts, "note": reasons_face}
+    else:
+        reasons.append("Селфи не обнаружено — на фотографиях не найдено лиц")
+        details["faces"] = {"found": False, "max_count": 0, "pts": 0}
+
+    # ── Block 4: Blur (10 pts: all sharp=10, half=5, less=0) ────────────────
+    blur_ratio = blur_pass / n
+    if blur_ratio >= 1.0:
+        block4 = 10
+    elif blur_ratio >= 0.5:
+        block4 = 5
+    else:
+        block4 = 0
+    score += block4
+    details["blur"] = {"sharp": blur_pass, "total": n, "pts": block4}
+
+    # ── Block 5: Resolution (5 pts: all pass=5, else=0) ─────────────────────
+    block5 = 5 if res_pass == n else 0
+    score += block5
+    details["resolution"] = {"ok": res_pass == n, "passed": res_pass, "total": n, "pts": block5}
+
+    details["total_score"] = score
+
+    # ── Verdict ──────────────────────────────────────────────────────────────
+    approved = score >= 80
+    high_risk = score < 50
+
+    if approved:
+        verdict = [f"✅ Авто-одобрено (AI score: {score}/100)"]
+    elif high_risk:
+        verdict = [f"⚠️ Высокий риск (score: {score}/100) — отправлено координатору"]
+    else:
+        verdict = [f"📋 Отправлено на проверку координатору (score: {score}/100)"]
+
+    if reasons:
+        verdict += reasons
 
     return {
-        "approved": False,
-        "score": round(final_score, 2),
-        "confidence_percent": pct,
+        "approved": approved,
+        "score": score,
+        "confidence_percent": score,
         "reasons": verdict,
         "details": details,
+        "high_risk": high_risk,
     }

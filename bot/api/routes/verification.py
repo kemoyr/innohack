@@ -77,7 +77,8 @@ async def upload_verification(
             except OSError:
                 pass
 
-    # Save verification record (всегда ждёт координатора; ai_approved не используем для очереди)
+    ai_approved_flag = 1 if result["approved"] else 0
+
     ver_id = await create_event_verification(
         event_id=event_id,
         volunteer_id=user["user_id"],
@@ -86,19 +87,29 @@ async def upload_verification(
         lat=location_lat if location_lat != 0 else None,
         lon=location_lon if location_lon != 0 else None,
         ai_score=result["score"],
-        ai_approved=0,
+        ai_approved=ai_approved_flag,
         ai_reasons=json.dumps(result["reasons"], ensure_ascii=False),
     )
 
+    event_status = "pending"
+    if result["approved"]:
+        await moderate_event(
+            event_id,
+            "planned",
+            f"Авто-одобрено (AI score: {result['score']}/100)",
+        )
+        await update_verification_decision(ver_id, "approved", "auto")
+        event_status = "planned"
+
     return {
         "verification_id": ver_id,
-        "ai_approved": False,
+        "ai_approved": result["approved"],
         "ai_score": result["score"],
-        "ai_confidence_percent": result.get("confidence_percent")
-        or int(round(result["score"] * 100)),
+        "ai_confidence_percent": result.get("confidence_percent", result["score"]),
         "ai_reasons": result["reasons"],
         "ai_details": result["details"],
-        "event_status": "pending",
+        "high_risk": result.get("high_risk", False),
+        "event_status": event_status,
     }
 
 
