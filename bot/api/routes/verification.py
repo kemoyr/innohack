@@ -60,7 +60,6 @@ async def upload_verification(
                 tmp.write(content)
                 temp_paths.append(tmp.name)
 
-        # Run AI moderation
         result = run_moderation(
             photo_paths=temp_paths,
             lat=location_lat if location_lat != 0 else None,
@@ -70,7 +69,6 @@ async def upload_verification(
             demo_mode=settings.DEMO_MODE,
         )
     finally:
-        # Clean up temp files
         for p in temp_paths:
             try:
                 os.unlink(p)
@@ -149,10 +147,6 @@ async def my_events(user=Depends(get_current_user)):
             "ai_approved": ver["ai_approved"] if ver else None,
         })
     return result
-
-
-# ── Coordinator moderation ───────
-
 
 class ModerationAction(BaseModel):
     action: str  # "approve" or "reject"

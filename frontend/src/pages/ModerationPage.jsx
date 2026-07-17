@@ -13,7 +13,7 @@ export default function ModerationPage() {
     fetchData();
   }, []);
 
-  async function fetchData() {
+  const fetchData = async () => {
     setLoading(true);
     try {
       const [q, h] = await Promise.all([
@@ -27,9 +27,9 @@ export default function ModerationPage() {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function handleDecision(eventId, action, comment = '') {
+  const handleDecision = async (eventId, action, comment = '') => {
     setActing(eventId);
     try {
       await api.moderateEvent(eventId, { action, comment });
@@ -39,7 +39,7 @@ export default function ModerationPage() {
     } finally {
       setActing(null);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -58,7 +58,6 @@ export default function ModerationPage() {
         </p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2">
         <button
           onClick={() => setTab('queue')}
@@ -159,14 +158,12 @@ export default function ModerationPage() {
                   )}
                 </div>
 
-                {/* Geo info */}
                 {(item.location_lat || item.location_lon) && (
                   <p className="text-xs text-neutral-400 mb-4">
                     Координаты: {item.location_lat?.toFixed(4)}, {item.location_lon?.toFixed(4)}
                   </p>
                 )}
 
-                {/* Actions */}
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleDecision(item.event_id, 'approve')}
@@ -196,7 +193,6 @@ export default function ModerationPage() {
           </div>
         )
       ) : (
-        /* History tab */
         history.length > 0 ? (
           <div className="bg-white rounded-xl border border-neutral-200/60 overflow-hidden">
             <div className="overflow-x-auto">

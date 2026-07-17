@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Award, Medal, Star, Loader2 } from 'lucide-react';
+import { Trophy, Award, Medal, Star, Loader2, Users, Flame, MapPin } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../api';
 
@@ -16,7 +16,7 @@ function formatDate(dateStr) {
 const badgeGradients = {
   gold: 'from-primary-400 to-primary-600',
   silver: 'from-neutral-400 to-neutral-500',
-  bronze: 'from-accent-400 to-accent-600',
+  bronze: 'from-primary-600 to-primary-800',
   default: 'from-neutral-700 to-neutral-900',
 };
 
@@ -47,10 +47,10 @@ const podiumConfig = [
   },
   {
     place: 3,
-    gradient: 'from-accent-400 to-accent-600',
-    ring: 'ring-accent-400/50',
-    bg: 'bg-accent-50',
-    rankBg: 'bg-accent-500',
+    gradient: 'from-primary-600 to-primary-800',
+    ring: 'ring-primary-300/50',
+    bg: 'bg-primary-50',
+    rankBg: 'bg-primary-700',
     rankText: 'text-white',
     size: 'w-16 h-16',
     textSize: 'text-xl',
@@ -62,25 +62,28 @@ const podiumConfig = [
 export default function Ratings() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [achievements, setAchievements] = useState([]);
+  const [nominations, setNominations] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('leaderboard');
   const navigate = useNavigate();
 
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
       try {
-        const [leaderData, achData] = await Promise.all([
+        const [leaderData, achData, nomData] = await Promise.all([
           api.getLeaderboard(),
           api.getAchievements(),
+          api.getNominations(),
         ]);
         setLeaderboard(leaderData);
         setAchievements(achData);
+        setNominations(nomData);
       } catch (err) {
         console.error('Failed to fetch ratings data:', err);
       } finally {
         setLoading(false);
       }
-    }
+    };
     fetchData();
   }, []);
 
@@ -105,7 +108,6 @@ export default function Ratings() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-neutral-900">Рейтинг</h1>
         <p className="text-sm text-neutral-500 mt-0.5">
@@ -113,7 +115,6 @@ export default function Ratings() {
         </p>
       </div>
 
-      {/* Tab Toggle */}
       <div className="flex gap-2">
         <button
           onClick={() => setTab('leaderboard')}
@@ -148,9 +149,84 @@ export default function Ratings() {
         </button>
       </div>
 
+      {nominations && (nominations.biggest_audience || nominations.most_active || nominations.multi_city) && (
+        <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
+          <h2 className="text-sm font-semibold text-neutral-900 mb-4">Номинации</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {nominations.biggest_audience && (
+              <div
+                onClick={() => navigate(`/volunteer/${nominations.biggest_audience.volunteer_id}`)}
+                className="cursor-pointer p-4 rounded-xl border border-neutral-200/60 hover:border-primary-300/50 transition-all"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                    <Users size={16} className="text-primary-700" />
+                  </div>
+                  <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
+                    Самая большая аудитория
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-neutral-900">
+                  {nominations.biggest_audience.attendance_count} человек
+                </p>
+                <p className="text-xs text-neutral-500 mt-0.5 truncate">
+                  {nominations.biggest_audience.event_title}
+                </p>
+                {nominations.biggest_audience.volunteer_name && (
+                  <p className="text-xs text-primary-700 mt-1 font-medium">
+                    {nominations.biggest_audience.volunteer_name}
+                  </p>
+                )}
+              </div>
+            )}
+            {nominations.most_active && (
+              <div
+                onClick={() => navigate(`/volunteer/${nominations.most_active.id}`)}
+                className="cursor-pointer p-4 rounded-xl border border-neutral-200/60 hover:border-primary-300/50 transition-all"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                    <Flame size={16} className="text-primary-700" />
+                  </div>
+                  <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
+                    Самый активный волонтёр
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-neutral-900">
+                  {nominations.most_active.event_count} мероприятий
+                </p>
+                <p className="text-xs text-primary-700 mt-1 font-medium">
+                  {nominations.most_active.full_name}
+                </p>
+              </div>
+            )}
+            {nominations.multi_city && (
+              <div
+                onClick={() => navigate(`/volunteer/${nominations.multi_city.id}`)}
+                className="cursor-pointer p-4 rounded-xl border border-neutral-200/60 hover:border-primary-300/50 transition-all"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                    <MapPin size={16} className="text-primary-700" />
+                  </div>
+                  <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
+                    Мультигород
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-neutral-900">
+                  {nominations.multi_city.city_count} города
+                </p>
+                <p className="text-xs text-primary-700 mt-1 font-medium">
+                  {nominations.multi_city.full_name}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {tab === 'leaderboard' ? (
         <div className="space-y-6">
-          {/* Podium - Top 3 */}
           {top3.length >= 3 && (
             <div className="bg-white rounded-xl border border-neutral-200/60 p-8">
               <div className="flex items-end justify-center gap-6 md:gap-10">
@@ -193,7 +269,6 @@ export default function Ratings() {
             </div>
           )}
 
-          {/* Podium fallback for fewer than 3 */}
           {top3.length > 0 && top3.length < 3 && (
             <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
               <div className="flex justify-center gap-8">
@@ -226,7 +301,6 @@ export default function Ratings() {
             </div>
           )}
 
-          {/* Points Distribution Chart */}
           {chartBarData.length > 0 && (
             <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
               <h2 className="text-sm font-semibold text-neutral-900 mb-4">
@@ -256,12 +330,12 @@ export default function Ratings() {
                         color: '#f5f5f5',
                         padding: '8px 12px',
                       }}
-                      itemStyle={{ color: '#FFC800' }}
+                      itemStyle={{ color: '#FFCC00' }}
                       labelStyle={{ color: '#a3a3a3', marginBottom: '4px' }}
                     />
                     <Bar
                       dataKey="points"
-                      fill="#FFC800"
+                      fill="#FFCC00"
                       radius={[6, 6, 0, 0]}
                       name="Баллы"
                     />
@@ -271,7 +345,6 @@ export default function Ratings() {
             </div>
           )}
 
-          {/* Full Table */}
           {leaderboard.length > 0 && (
             <div className="bg-white rounded-xl border border-neutral-200/60 overflow-hidden">
               <div className="px-6 py-4 border-b border-neutral-100">
@@ -314,7 +387,7 @@ export default function Ratings() {
                       const rankColors = [
                         'bg-primary-500 text-black',
                         'bg-neutral-400 text-white',
-                        'bg-accent-500 text-white',
+                        'bg-primary-700 text-white',
                       ];
                       return (
                         <tr
@@ -400,7 +473,6 @@ export default function Ratings() {
           )}
         </div>
       ) : (
-        /* Achievements Tab */
         <div className="space-y-6">
           {achievements.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -55,7 +55,6 @@ def extract_exif(image_path: str) -> dict:
     if not exif:
         return result
 
-    # Parse datetime
     dt_str = exif.get("DateTimeOriginal") or exif.get("DateTime")
     if dt_str:
         try:
@@ -63,7 +62,6 @@ def extract_exif(image_path: str) -> dict:
         except (ValueError, TypeError) as e:
             logger.warning("Failed to parse EXIF datetime '%s': %s", dt_str, e)
 
-    # Parse GPS
     gps = _get_gps_info(exif)
     if gps:
         lat_dms = gps.get("GPSLatitude")

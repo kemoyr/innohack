@@ -25,10 +25,6 @@ class ReviewRequest(BaseModel):
     rating: int
     comment: str = ""
 
-
-# ── Applications ─────────────────
-
-
 @router.post("/events/{event_id}/apply")
 async def apply_to_event(event_id: int, req: ApplyRequest, user=Depends(get_current_user)):
     """Volunteer applies to a planned event."""

@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from bot.api.routes import auth, volunteers, events, stats, verification, applications
+from bot.config import settings
 
 
 def create_app(bot=None) -> FastAPI:
@@ -13,8 +14,8 @@ def create_app(bot=None) -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
+        allow_origins=[settings.WEBAPP_URL] if settings.WEBAPP_URL else ["*"],
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )

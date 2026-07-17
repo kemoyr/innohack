@@ -184,7 +184,6 @@ export default function EventCard({ event, onApplied }) {
             </div>
           </div>
 
-          {/* Stats row */}
           <div className="flex items-center gap-4 mt-2.5">
             {event.application_count > 0 && (
               <div className="flex items-center gap-1 text-xs text-neutral-500">

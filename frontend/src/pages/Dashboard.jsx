@@ -17,7 +17,7 @@ function formatCurrentDate() {
   });
 }
 
-const PIE_COLORS = ['#FFC800', '#10b981', '#ef4444'];
+const PIE_COLORS = ['#FFCC00', '#10b981', '#ef4444'];
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -27,7 +27,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
       try {
         const [statsData, eventsData, leaderData] = await Promise.all([
           api.getStats(),
@@ -65,7 +65,7 @@ export default function Dashboard() {
       } finally {
         setLoading(false);
       }
-    }
+    };
     fetchData();
   }, []);
 
@@ -102,7 +102,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-neutral-900">Обзор</h1>
         <p className="text-sm text-neutral-500 mt-0.5 capitalize">
@@ -110,7 +109,6 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Волонтёров"
@@ -142,7 +140,6 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Activity Chart */}
       {chartData.length > 0 && (
         <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
           <div className="flex items-center justify-between mb-4">
@@ -160,8 +157,8 @@ export default function Dashboard() {
               <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#FFC800" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="#FFC800" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#FFCC00" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="#FFCC00" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis
@@ -186,13 +183,13 @@ export default function Dashboard() {
                     color: '#f5f5f5',
                     padding: '8px 12px',
                   }}
-                  itemStyle={{ color: '#FFC800' }}
+                  itemStyle={{ color: '#FFCC00' }}
                   labelStyle={{ color: '#a3a3a3', marginBottom: '4px' }}
                 />
                 <Area
                   type="monotone"
                   dataKey="count"
-                  stroke="#FFC800"
+                  stroke="#FFCC00"
                   strokeWidth={2}
                   fill="url(#colorCount)"
                   name="Мероприятий"
@@ -203,11 +200,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column - 2/3 */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Recent Events */}
           <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-neutral-900">
@@ -235,7 +229,6 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Activity Feed */}
           <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-neutral-900">
@@ -250,9 +243,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Right column - 1/3 */}
         <div className="lg:col-span-1 space-y-6">
-          {/* Mini leaderboard */}
           <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-neutral-900">
@@ -269,7 +260,6 @@ export default function Dashboard() {
             <Leaderboard data={topVolunteers} compact />
           </div>
 
-          {/* Event Distribution */}
           {pieData.length > 0 && (
             <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
               <h2 className="text-sm font-semibold text-neutral-900 mb-4">

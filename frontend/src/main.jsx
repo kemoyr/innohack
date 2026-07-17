@@ -4,7 +4,6 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
 
-// Initialize Telegram WebApp if available
 if (window.Telegram?.WebApp) {
   window.Telegram.WebApp.ready();
   window.Telegram.WebApp.expand();

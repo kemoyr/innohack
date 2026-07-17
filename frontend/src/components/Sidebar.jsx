@@ -75,7 +75,6 @@ export default function Sidebar({ mobileOpen = false, onClose }) {
         </button>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -100,12 +99,10 @@ export default function Sidebar({ mobileOpen = false, onClose }) {
         })}
       </nav>
 
-      {/* Beeline stripe accent */}
       <div className="mx-6 mb-4">
         <div className="h-1 rounded-full bg-gradient-to-r from-primary-500 via-primary-400 to-primary-500" />
       </div>
 
-      {/* User info */}
       <div className="px-4 py-3 mx-3 mb-2 rounded-lg bg-white/5">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-primary-500/20 rounded-full flex items-center justify-center">
@@ -122,7 +119,6 @@ export default function Sidebar({ mobileOpen = false, onClose }) {
         </div>
       </div>
 
-      {/* Logout */}
       <div className="px-3 py-3 border-t border-white/10">
         <button
           onClick={handleLogout}

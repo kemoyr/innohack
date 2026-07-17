@@ -176,7 +176,11 @@ async def _seed_demo_data(db):
 
     pw = _hash_pw("demo123")
 
-    # Coordinator
+    now = datetime.now()
+
+    def _rel(days_offset: int) -> str:
+        return (now + timedelta(days=days_offset)).strftime("%Y-%m-%d")
+
     await db.execute(
         """INSERT INTO volunteers (telegram_id, username, full_name, city, phone, email, password_hash, role, status, points)
            VALUES (?,?,?,?,?,?,?,?,?,?)""",
@@ -184,7 +188,6 @@ async def _seed_demo_data(db):
          "coordinator@example.com", pw, "coordinator", "active", 0),
     )
 
-    # Volunteers
     volunteers = [
         (100001, "alisa_iv", "Алиса Иванова", "Москва", "+79001111111", "alisa@example.com", "volunteer", "active", 350),
         (100002, "boris_p", "Борис Петров", "Санкт-Петербург", "+79002222222", "boris@example.com", "volunteer", "active", 280),
@@ -204,13 +207,12 @@ async def _seed_demo_data(db):
             (tg_id, username, name, city, phone, email, pw, role, status, points),
         )
 
-    # Completed events (coordinator_id=1)
     completed_events = [
-        ("Лекция по программированию", "Введение в Python для школьников", "Школа №42, Москва", 55.7558, 37.6173, "2026-03-20", "completed", 25),
-        ("Мастер-класс по робототехнике", "Основы Arduino", "Библиотека им. Ленина, СПб", 59.9343, 30.3351, "2026-03-18", "completed", 15),
-        ("Воркшоп по дизайну", "Figma для начинающих", "Технопарк, Казань", 55.7887, 49.1221, "2026-03-15", "completed", 30),
-        ("Лекция по экологии", "Раздельный сбор мусора", "ДК Молодёжи, Новосибирск", 55.0084, 82.9357, "2026-03-12", "completed", 20),
-        ("Фестиваль науки", "Физика в повседневной жизни", "Уральский ТЦ, Екатеринбург", 56.8389, 60.6057, "2026-03-10", "completed", 50),
+        ("Лекция по программированию", "Введение в Python для школьников", "Школа №42, Москва", 55.7558, 37.6173, _rel(0), "completed", 25),
+        ("Мастер-класс по робототехнике", "Основы Arduino", "Библиотека им. Ленина, СПб", 59.9343, 30.3351, _rel(-2), "completed", 15),
+        ("Воркшоп по дизайну", "Figma для начинающих", "Технопарк, Казань", 55.7887, 49.1221, _rel(-5), "completed", 30),
+        ("Лекция по экологии", "Раздельный сбор мусора", "ДК Молодёжи, Новосибирск", 55.0084, 82.9357, _rel(-8), "completed", 20),
+        ("Фестиваль науки", "Физика в повседневной жизни", "Уральский ТЦ, Екатеринбург", 56.8389, 60.6057, _rel(-11), "completed", 50),
     ]
     event_ids = []
     for title, desc, loc, lat, lon, date, status, attendance in completed_events:
@@ -226,9 +228,9 @@ async def _seed_demo_data(db):
 
     # Planned events
     planned_events = [
-        ("Хакатон для школьников", "24-часовой хакатон по разработке приложений", "Технопарк, Москва", 55.7558, 37.6173, "2026-04-05", "planned", 0),
-        ("Лекция по ИИ", "Как работает ChatGPT", "IT-парк, Санкт-Петербург", 59.9343, 30.3351, "2026-04-10", "planned", 0),
-        ("Мастер-класс по 3D-печати", "Создаём первую модель", "FabLab, Казань", 55.7887, 49.1221, "2026-04-15", "planned", 0),
+        ("Хакатон для школьников", "24-часовой хакатон по разработке приложений", "Технопарк, Москва", 55.7558, 37.6173, _rel(5), "planned", 0),
+        ("Лекция по ИИ", "Как работает ChatGPT", "IT-парк, Санкт-Петербург", 59.9343, 30.3351, _rel(10), "planned", 0),
+        ("Мастер-класс по 3D-печати", "Создаём первую модель", "FabLab, Казань", 55.7887, 49.1221, _rel(16), "planned", 0),
     ]
     for title, desc, loc, lat, lon, date, status, attendance in planned_events:
         qr = f"EVT-{uuid.uuid4().hex[:8].upper()}"
@@ -278,7 +280,7 @@ async def _seed_demo_data(db):
         (0, "marathon", "Марафонец", "5+ мероприятий проведено"),
         (0, "ambassador", "Амбассадор", "Самый активный волонтёр месяца"),
         (1, "first_event", "Первая лекция", "Провёл первое мероприятие"),
-        (1, "star", "Звезда сцены", "Самая большая аудитория — 50 человек"),
+        (1, "star", "Звезда сцены", "Провёл мероприятие с аншлагом"),
         (2, "first_event", "Первая лекция", "Провела первое мероприятие"),
         (2, "multicity", "Мультигород", "Мероприятия в разных городах"),
         (3, "first_event", "Первая лекция", "Провёл первое мероприятие"),
@@ -297,20 +299,10 @@ async def _seed_demo_data(db):
     logger.info("Volunteer: alisa@example.com / demo123")
 
 
-async def get_db():
-    db = await aiosqlite.connect(DB_PATH)
-    db.row_factory = aiosqlite.Row
-    return db
-
-
 def _row_to_dict(row):
     if row is None:
         return None
     return dict(row)
-
-
-# ── Volunteers ────────────────────
-
 
 async def get_volunteer(telegram_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
@@ -397,10 +389,6 @@ async def get_volunteer_submissions(volunteer_id: int):
         )
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
-
-
-# ── Events ────────────────────────
-
 
 async def create_event(
     title: str,
@@ -521,10 +509,6 @@ async def moderate_event(event_id: int, status: str, note: str = ""):
         )
         await db.commit()
 
-
-# ── Event Verifications ──────────
-
-
 async def create_event_verification(
     event_id: int, volunteer_id: int, photo_paths: str = "[]",
     volunteer_comment: str = "",
@@ -600,10 +584,6 @@ async def update_verification_decision(verification_id: int, decision: str, comm
             (decision, comment, verification_id),
         )
         await db.commit()
-
-
-# ── Submissions ───────────────────
-
 
 async def create_submission(
     volunteer_id: int, event_id=None, lat=None, lon=None,
@@ -700,10 +680,6 @@ async def get_achievements(volunteer_id: int):
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
 
-
-# ── Stats ─────────────────────────
-
-
 async def get_stats():
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
@@ -753,8 +729,74 @@ async def get_stats():
         "pending_events": pending_events,
     }
 
+async def get_nominations():
+    """Automatically computed nominations from real event/submission data
+    (replaces static/demographic badges like "youngest listener", which would
+    require data we don't collect)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
 
-# ── QR usage check ───────────────
+        cursor = await db.execute(
+            """SELECT id, title, location_name, scheduled_date, attendance_count
+               FROM events
+               WHERE status = 'completed' AND attendance_count > 0
+               ORDER BY attendance_count DESC
+               LIMIT 1"""
+        )
+        top_event = await cursor.fetchone()
+        biggest_audience = None
+        if top_event:
+            cursor = await db.execute(
+                """SELECT v.id, v.full_name
+                   FROM submissions s
+                   JOIN volunteers v ON v.id = s.volunteer_id
+                   WHERE s.event_id = ? AND s.status = 'verified'
+                   ORDER BY s.points_awarded DESC
+                   LIMIT 1""",
+                (top_event["id"],),
+            )
+            volunteer = await cursor.fetchone()
+            biggest_audience = {
+                "event_id": top_event["id"],
+                "event_title": top_event["title"],
+                "location_name": top_event["location_name"],
+                "scheduled_date": top_event["scheduled_date"],
+                "attendance_count": top_event["attendance_count"],
+                "volunteer_id": volunteer["id"] if volunteer else None,
+                "volunteer_name": volunteer["full_name"] if volunteer else None,
+            }
+
+        cursor = await db.execute(
+            """SELECT v.id, v.full_name, v.city, COUNT(*) as event_count
+               FROM submissions s
+               JOIN volunteers v ON v.id = s.volunteer_id
+               WHERE s.status = 'verified'
+               GROUP BY v.id
+               ORDER BY event_count DESC
+               LIMIT 1"""
+        )
+        row = await cursor.fetchone()
+        most_active = dict(row) if row else None
+
+        cursor = await db.execute(
+            """SELECT v.id, v.full_name, v.city, COUNT(DISTINCT e.location_name) as city_count
+               FROM submissions s
+               JOIN volunteers v ON v.id = s.volunteer_id
+               JOIN events e ON e.id = s.event_id
+               WHERE s.status = 'verified'
+               GROUP BY v.id
+               HAVING city_count > 1
+               ORDER BY city_count DESC
+               LIMIT 1"""
+        )
+        row = await cursor.fetchone()
+        multi_city = dict(row) if row else None
+
+    return {
+        "biggest_audience": biggest_audience,
+        "most_active": most_active,
+        "multi_city": multi_city,
+    }
 
 
 async def mark_qr_used(qr_code: str, volunteer_id: int) -> bool:
@@ -766,10 +808,6 @@ async def mark_qr_used(qr_code: str, volunteer_id: int) -> bool:
         )
         row = await cursor.fetchone()
         return row is not None
-
-
-# ── Toggle volunteer status ──────
-
 
 async def toggle_volunteer_status(volunteer_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
@@ -788,10 +826,6 @@ async def toggle_volunteer_status(volunteer_id: int):
         await db.commit()
         return new_status
 
-
-# ── Recent activity helpers ──────
-
-
 async def get_recent_submissions(limit: int = 20):
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
@@ -808,10 +842,6 @@ async def get_recent_submissions(limit: int = 20):
         )
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
-
-
-# ── Event Applications ──────────
-
 
 async def create_application(event_id: int, volunteer_id: int, full_name: str, email: str, phone: str = ""):
     async with aiosqlite.connect(DB_PATH) as db:

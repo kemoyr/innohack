@@ -29,7 +29,7 @@ function formatDate(dateStr) {
 const badgeColors = {
   gold: 'from-primary-400 to-primary-600',
   silver: 'from-neutral-400 to-neutral-500',
-  bronze: 'from-accent-400 to-accent-600',
+  bronze: 'from-primary-600 to-primary-800',
   default: 'from-neutral-700 to-neutral-900',
 };
 
@@ -56,7 +56,7 @@ export default function VolunteerDetail() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
       try {
         const data = await api.getVolunteer(id);
         setVolunteer(data);
@@ -65,7 +65,7 @@ export default function VolunteerDetail() {
       } finally {
         setLoading(false);
       }
-    }
+    };
     fetchData();
   }, [id]);
 
@@ -105,7 +105,6 @@ export default function VolunteerDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Back button */}
       <button
         onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-sm text-neutral-500 hover:text-primary-700 transition-colors font-medium"
@@ -114,7 +113,6 @@ export default function VolunteerDetail() {
         <span>Назад</span>
       </button>
 
-      {/* Profile Header */}
       <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
         {isPublicProfile && (
           <div className="mb-4 rounded-xl border border-neutral-200/80 bg-neutral-50 px-4 py-3 text-xs text-neutral-600 leading-relaxed">
@@ -236,7 +234,6 @@ export default function VolunteerDetail() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Submissions */}
         <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
           <div className="flex items-center gap-2 mb-1">
             <FileText size={16} className="text-neutral-400" />
@@ -306,7 +303,6 @@ export default function VolunteerDetail() {
           )}
         </div>
 
-        {/* Achievements */}
         <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
           <div className="flex items-center gap-2 mb-4">
             <Award size={16} className="text-neutral-400" />
@@ -342,7 +338,6 @@ export default function VolunteerDetail() {
         </div>
       </div>
 
-      {/* Reviews written by this volunteer */}
       {reviews.length > 0 && (
         <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
           <div className="flex items-center gap-2 mb-4">

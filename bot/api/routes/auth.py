@@ -12,10 +12,6 @@ from bot.config import settings
 
 router = APIRouter(tags=["auth"])
 
-
-# ── Password hashing ─────────────
-
-
 def hash_password(password: str) -> str:
     salt = os.urandom(16)
     dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
@@ -31,10 +27,6 @@ def verify_password(password: str, stored: str) -> bool:
     except Exception:
         return False
 
-
-# ── JWT ───────────────────────────
-
-
 def create_jwt_token(user_id: int = None, role: str = "coordinator") -> str:
     payload = {
         "user_id": user_id,
@@ -47,10 +39,6 @@ def create_jwt_token(user_id: int = None, role: str = "coordinator") -> str:
 
 def decode_token(token: str) -> dict:
     return jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-
-
-# ── Dependencies ─────────────────
-
 
 def get_current_user(authorization: str = Header(default="")):
     """Any authenticated user (volunteer or coordinator)."""
@@ -88,10 +76,6 @@ def get_optional_user(authorization: str = Header(default="")):
     except Exception:
         return None
 
-
-# ── Request models ───────────────
-
-
 class LoginRequest(BaseModel):
     email: str
     password: str
@@ -113,10 +97,6 @@ class TokenResponse(BaseModel):
 
 class WebAppAuthRequest(BaseModel):
     initData: str
-
-
-# ── Endpoints ────────────────────
-
 
 @router.post("/auth/login")
 async def login_user(request: LoginRequest):

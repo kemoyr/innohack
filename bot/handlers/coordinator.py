@@ -16,6 +16,7 @@ from aiogram.types import (
 
 from bot.database import (
     get_volunteer,
+    get_volunteer_by_id,
     get_all_volunteers,
     get_volunteer_submissions,
     get_achievements,
@@ -25,17 +26,17 @@ from bot.database import (
     get_leaderboard,
     create_event,
     update_event_status,
+    get_event_by_id,
 )
 from bot.utils.qr import generate_qr_image, generate_event_code
 from bot.handlers.start import show_coordinator_menu, coordinator_menu_keyboard
+from bot.config import settings
 from bot import strings
 
 logger = logging.getLogger(__name__)
 
 router = Router(name="coordinator")
 
-
-# ── FSM States ────────────────────
 
 class QRGeneration(StatesGroup):
     waiting_title = State()
@@ -46,8 +47,6 @@ class QRGeneration(StatesGroup):
 class EventCompletion(StatesGroup):
     waiting_attendance = State()
 
-
-# ── Team ──────────────────────────
 
 @router.message(F.text == strings.BTN_TEAM)
 async def team_list(message: Message):
@@ -88,14 +87,7 @@ async def volunteer_detail(callback: CallbackQuery):
         await callback.answer()
         vol_id = int(callback.data.split(":")[1])
 
-        # Get volunteer by id
-        volunteers = await get_all_volunteers()
-        vol = None
-        for v in volunteers:
-            if v["id"] == vol_id:
-                vol = v
-                break
-
+        vol = await get_volunteer_by_id(vol_id)
         if not vol:
             await callback.message.answer("Волонтёр не найден.")
             return
@@ -119,8 +111,6 @@ async def volunteer_detail(callback: CallbackQuery):
         logger.error("Error showing volunteer detail: %s", e)
 
 
-# ── Stats ─────────────────────────
-
 @router.message(F.text == strings.BTN_STATS)
 async def show_stats(message: Message):
     try:
@@ -136,8 +126,6 @@ async def show_stats(message: Message):
         logger.error("Error showing stats: %s", e)
         await message.answer(strings.ERROR_GENERAL)
 
-
-# ── Calendar ──────────────────────
 
 @router.message(F.text == strings.BTN_CALENDAR)
 async def show_calendar(message: Message):
@@ -211,14 +199,8 @@ async def process_attendance(message: Message, state: FSMContext):
 
         await update_event_status(event_id, "completed", attendance)
 
-        # Get event title for the message
-        from bot.database import get_all_events
-        events = await get_all_events()
-        title = "Мероприятие"
-        for ev in events:
-            if ev["id"] == event_id:
-                title = ev["title"]
-                break
+        event = await get_event_by_id(event_id)
+        title = event["title"] if event else "Мероприятие"
 
         await state.clear()
         await message.answer(
@@ -229,8 +211,6 @@ async def process_attendance(message: Message, state: FSMContext):
         logger.error("Error completing event: %s", e)
         await message.answer(strings.ERROR_GENERAL)
 
-
-# ── Ratings ───────────────────────
 
 @router.message(F.text == strings.BTN_RATINGS)
 async def show_ratings(message: Message):
@@ -264,8 +244,6 @@ async def show_ratings(message: Message):
         await message.answer(strings.ERROR_GENERAL)
 
 
-# ── QR Generation ─────────────────
-
 @router.message(F.text == strings.BTN_GENERATE_QR)
 async def start_qr_generation(message: Message, state: FSMContext):
     try:
@@ -297,13 +275,12 @@ async def qr_process_title(message: Message, state: FSMContext):
 async def qr_process_date(message: Message, state: FSMContext):
     try:
         date_text = message.text.strip()
-        # Try to parse DD.MM.YYYY
         try:
             from datetime import datetime
             parsed = datetime.strptime(date_text, "%d.%m.%Y")
             scheduled_date = parsed.strftime("%Y-%m-%d")
         except ValueError:
-            scheduled_date = date_text  # store as-is if parsing fails
+            scheduled_date = date_text
 
         await state.update_data(event_date=date_text, scheduled_date=scheduled_date)
         await message.answer(strings.QR_ASK_LOCATION)
@@ -324,10 +301,8 @@ async def qr_process_location(message: Message, state: FSMContext):
         scheduled_date = data.get("scheduled_date", "")
         coordinator_id = data["coordinator_id"]
 
-        # Generate unique QR code
         code = generate_event_code()
 
-        # Create event in DB
         await create_event(
             title=event_title,
             description="",
@@ -339,7 +314,6 @@ async def qr_process_location(message: Message, state: FSMContext):
             coordinator_id=coordinator_id,
         )
 
-        # Generate QR image
         qr_bytes = generate_qr_image(code)
 
         await state.clear()
@@ -361,8 +335,6 @@ async def qr_process_location(message: Message, state: FSMContext):
         await message.answer(strings.ERROR_GENERAL)
 
 
-# ── Dashboard Link ────────────────
-
 @router.message(F.text == strings.BTN_DASHBOARD)
 async def send_dashboard_link(message: Message):
     try:
@@ -370,7 +342,10 @@ async def send_dashboard_link(message: Message):
         if not volunteer or volunteer["role"] != "coordinator":
             await message.answer(strings.ERROR_NO_PERMISSION)
             return
-        await message.answer(strings.DASHBOARD_LINK)
+        if settings.WEBAPP_URL:
+            await message.answer(strings.dashboard_link(settings.WEBAPP_URL))
+        else:
+            await message.answer(strings.DASHBOARD_LINK_UNAVAILABLE)
     except Exception as e:
         logger.error("Error sending dashboard link: %s", e)
         await message.answer(strings.ERROR_GENERAL)

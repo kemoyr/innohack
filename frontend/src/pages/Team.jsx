@@ -12,7 +12,7 @@ export default function Team() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
       try {
         const data = await api.getVolunteers();
         setVolunteers(data);
@@ -21,7 +21,7 @@ export default function Team() {
       } finally {
         setLoading(false);
       }
-    }
+    };
     fetchData();
   }, []);
 
@@ -34,7 +34,7 @@ export default function Team() {
         prev.map((v) => (v.id === volunteerId ? { ...v, status: updated.status || (v.status === 'active' ? 'inactive' : 'active') } : v))
       );
     } catch {
-      // Silently fail
+      // Avoid UI noise; list will re-sync on next fetch/navigation.
     } finally {
       setTogglingId(null);
     }
@@ -73,7 +73,6 @@ export default function Team() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-neutral-900">Команда</h1>
         <p className="text-sm text-neutral-500 mt-0.5">
@@ -81,9 +80,7 @@ export default function Team() {
         </p>
       </div>
 
-      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3">
-        {/* Search */}
         <div className="relative flex-1">
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2">
             <Search size={16} className="text-neutral-400" />
@@ -97,7 +94,6 @@ export default function Team() {
           />
         </div>
 
-        {/* Filter Buttons */}
         <div className="flex gap-2">
           {filterButtons.map((btn) => {
             const Icon = btn.icon;
@@ -119,12 +115,10 @@ export default function Team() {
         </div>
       </div>
 
-      {/* Results count */}
       <p className="text-xs text-neutral-400 font-medium">
         Показано: {filtered.length} из {volunteers.length}
       </p>
 
-      {/* Volunteer Grid */}
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((v) => (

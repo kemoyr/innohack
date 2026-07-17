@@ -11,6 +11,7 @@ from bot.database import (
     get_submission_counts_by_volunteer,
     get_recent_submissions,
     get_recent_achievements,
+    get_nominations,
 )
 
 router = APIRouter(tags=["stats"])
@@ -68,7 +69,6 @@ async def activity_feed():
     try:
         items = []
 
-        # Recent submissions
         submissions = await get_recent_submissions(20)
         for s in submissions:
             vol_name = s.get("volunteer_name") or "Волонтёр"
@@ -79,7 +79,6 @@ async def activity_feed():
                 "created_at": s.get("created_at", ""),
             })
 
-        # Recent achievements
         achievements = await get_recent_achievements(10)
         for a in achievements:
             vol_name = a.get("volunteer_name") or "Волонтёр"
@@ -90,7 +89,6 @@ async def activity_feed():
                 "created_at": a.get("created_at", ""),
             })
 
-        # Recent events created
         events = await get_all_events()
         for ev in events[:10]:
             title = ev.get("title") or "мероприятие"
@@ -100,11 +98,16 @@ async def activity_feed():
                 "created_at": ev.get("created_at", ""),
             })
 
-        # Sort by created_at DESC, return top 20
         items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
         return items[:20]
     except Exception:
         return []
+
+
+@router.get("/stats/nominations")
+async def nominations():
+    """Automatically computed nominations (biggest audience, most active, multi-city)."""
+    return await get_nominations()
 
 
 @router.get("/stats/charts")
@@ -113,7 +116,6 @@ async def chart_data():
     try:
         events = await get_all_events()
 
-        # Daily events for the last 14 days
         today = datetime.utcnow().date()
         date_counts: dict[str, int] = {}
         for i in range(14):
@@ -127,14 +129,12 @@ async def chart_data():
 
         daily_events = [{"date": d, "count": c} for d, c in date_counts.items()]
 
-        # Events by city
         city_counts: dict[str, int] = {}
         for ev in events:
             city = ev.get("location_name") or "Не указано"
             city_counts[city] = city_counts.get(city, 0) + 1
         events_by_city = [{"city": c, "count": n} for c, n in city_counts.items()]
 
-        # Status distribution
         status_dist = {"planned": 0, "completed": 0, "cancelled": 0}
         for ev in events:
             st = ev.get("status", "planned")
