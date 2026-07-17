@@ -15,7 +15,7 @@ function formatDate(dateStr) {
 const badgeColors = {
   gold: 'from-primary-400 to-primary-600',
   silver: 'from-neutral-400 to-neutral-500',
-  bronze: 'from-accent-400 to-accent-600',
+  bronze: 'from-primary-600 to-primary-800',
   default: 'from-neutral-700 to-neutral-900',
 };
 
@@ -33,7 +33,7 @@ export default function VolunteerDetail() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
       try {
         const data = await api.getVolunteer(id);
         setVolunteer(data);
@@ -42,7 +42,7 @@ export default function VolunteerDetail() {
       } finally {
         setLoading(false);
       }
-    }
+    };
     fetchData();
   }, [id]);
 
@@ -80,7 +80,6 @@ export default function VolunteerDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Back button */}
       <button
         onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-sm text-neutral-500 hover:text-primary-700 transition-colors font-medium"
@@ -89,7 +88,6 @@ export default function VolunteerDetail() {
         <span>Назад</span>
       </button>
 
-      {/* Profile Header */}
       <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
         <div className="flex items-start gap-5">
           <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center text-primary-800 text-xl font-bold shrink-0">
@@ -138,7 +136,6 @@ export default function VolunteerDetail() {
           </div>
         </div>
 
-        {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-neutral-100">
           <div className="text-center">
             <div className="flex items-center justify-center gap-1.5 mb-1">
@@ -173,7 +170,6 @@ export default function VolunteerDetail() {
         </div>
       </div>
 
-      {/* Organizer Rating Card */}
       {orgRating.event_count > 0 && (
         <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
           <div className="flex items-center gap-2 mb-4">
@@ -205,7 +201,6 @@ export default function VolunteerDetail() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Submissions */}
         <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
           <div className="flex items-center gap-2 mb-4">
             <FileText size={16} className="text-neutral-400" />
@@ -251,7 +246,6 @@ export default function VolunteerDetail() {
           )}
         </div>
 
-        {/* Achievements */}
         <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
           <div className="flex items-center gap-2 mb-4">
             <Award size={16} className="text-neutral-400" />
@@ -287,7 +281,6 @@ export default function VolunteerDetail() {
         </div>
       </div>
 
-      {/* Reviews written by this volunteer */}
       {reviews.length > 0 && (
         <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
           <div className="flex items-center gap-2 mb-4">

@@ -24,10 +24,6 @@ class ReviewRequest(BaseModel):
     rating: int
     comment: str = ""
 
-
-# ── Applications ─────────────────
-
-
 @router.post("/events/{event_id}/apply")
 async def apply_to_event(event_id: int, req: ApplyRequest, user=Depends(get_current_user)):
     """Volunteer applies to a planned event."""
@@ -72,10 +68,6 @@ async def my_application_for_event(event_id: int, user=Depends(get_current_user)
     app = await get_application(event_id, user["user_id"])
     return app or {"applied": False}
 
-
-# ── Reviews ──────────────────────
-
-
 @router.post("/events/{event_id}/review")
 async def review_event(event_id: int, req: ReviewRequest, user=Depends(get_current_user)):
     """Leave a review for an event you applied to."""
@@ -88,7 +80,6 @@ async def review_event(event_id: int, req: ReviewRequest, user=Depends(get_curre
     if event["status"] != "completed":
         raise HTTPException(status_code=400, detail="Отзыв можно оставить только на завершённое мероприятие")
 
-    # Check that user applied to this event
     app = await get_application(event_id, user["user_id"])
     if not app:
         raise HTTPException(status_code=403, detail="Вы не подавали заявку на это мероприятие")

@@ -24,8 +24,6 @@ logger = logging.getLogger(__name__)
 router = Router(name="start")
 
 
-# ── FSM States ────────────────────
-
 class Registration(StatesGroup):
     waiting_name = State()
     waiting_city = State()
@@ -33,8 +31,6 @@ class Registration(StatesGroup):
     waiting_password_name = State()
     waiting_password_city = State()
 
-
-# ── Keyboard builders ────────────
 
 def volunteer_menu_keyboard():
     keyboard = [
@@ -44,7 +40,6 @@ def volunteer_menu_keyboard():
         [KeyboardButton(text=strings.BTN_VOLUNTEERS), KeyboardButton(text=strings.BTN_LEADERBOARD)],
         [KeyboardButton(text=strings.BTN_EVENTS), KeyboardButton(text=strings.BTN_HELP)],
     ]
-    # Add webapp button if configured
     if settings.WEBAPP_URL:
         keyboard.insert(-1, [KeyboardButton(
             text=strings.BTN_OPEN_APP,
@@ -80,8 +75,6 @@ def role_selection_keyboard():
     )
 
 
-# ── Helpers ───────────────────────
-
 async def show_volunteer_menu(message: Message, volunteer: dict):
     try:
         text = strings.MENU_VOLUNTEER_HEADER
@@ -97,8 +90,6 @@ async def show_coordinator_menu(message: Message):
     except Exception as e:
         logger.error("Error showing coordinator menu: %s", e)
 
-
-# ── /start ────────────────────────
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
@@ -119,8 +110,6 @@ async def cmd_start(message: Message, state: FSMContext):
         logger.error("Error in /start: %s", e)
         await message.answer(strings.ERROR_GENERAL)
 
-
-# ── Role Selection ────────────────
 
 @router.callback_query(F.data == "role_volunteer")
 async def role_volunteer_cb(callback: CallbackQuery, state: FSMContext):
@@ -144,8 +133,6 @@ async def role_coordinator_cb(callback: CallbackQuery, state: FSMContext):
     except Exception as e:
         logger.error("Error in role_coordinator callback: %s", e)
 
-
-# ── Coordinator Password ──────────
 
 @router.message(Registration.waiting_password)
 async def process_password(message: Message, state: FSMContext):
@@ -180,7 +167,7 @@ async def process_password_city(message: Message, state: FSMContext):
         username = message.from_user.username or ""
         full_name = data["full_name"]
 
-        # Check if already exists and update role
+        # Keep a single volunteer record to preserve points/submissions when promoting to coordinator.
         existing = await get_volunteer(message.from_user.id)
         if existing:
             import aiosqlite
@@ -208,8 +195,6 @@ async def process_password_city(message: Message, state: FSMContext):
         logger.error("Error completing coordinator registration: %s", e)
         await message.answer(strings.ERROR_GENERAL)
 
-
-# ── Volunteer Registration ────────
 
 @router.message(Registration.waiting_name)
 async def process_name(message: Message, state: FSMContext):

@@ -18,7 +18,7 @@ export default function Login() {
     }
   }, []);
 
-  async function handleSubmit(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -33,7 +33,7 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bee-black px-4">

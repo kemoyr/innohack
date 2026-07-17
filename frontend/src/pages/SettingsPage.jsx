@@ -7,7 +7,6 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-neutral-900">Настройки</h1>
         <p className="text-sm text-neutral-500 mt-0.5">
@@ -16,7 +15,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* System Info */}
         <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
           <div className="flex items-center gap-2 mb-5">
             <Server size={16} className="text-neutral-400" />
@@ -48,7 +46,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Profile */}
         <div className="bg-white rounded-xl border border-neutral-200/60 p-6">
           <div className="flex items-center gap-2 mb-5">
             <User size={16} className="text-neutral-400" />
@@ -83,7 +80,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Links */}
         <div className="bg-white rounded-xl border border-neutral-200/60 p-6 lg:col-span-2">
           <div className="flex items-center gap-2 mb-5">
             <Globe size={16} className="text-neutral-400" />
@@ -91,7 +87,7 @@ export default function SettingsPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <a
-              href="http://localhost:8000/docs"
+              href="/docs"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 p-4 rounded-xl border border-neutral-200/60 hover:bg-neutral-50 hover:border-primary-300/50 transition-all group"
@@ -106,7 +102,7 @@ export default function SettingsPage() {
               <ExternalLink size={14} className="text-neutral-400 group-hover:text-primary-600 transition-colors" />
             </a>
             <a
-              href="https://t.me/Beeline_dashboard_bot"
+              href="https://t.me/BeelineDashboardBot"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 p-4 rounded-xl border border-neutral-200/60 hover:bg-neutral-50 hover:border-primary-300/50 transition-all group"

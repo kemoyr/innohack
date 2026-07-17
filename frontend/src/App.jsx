@@ -65,18 +65,15 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Public or sidebar depending on auth */}
       <Route path="/" element={<SmartRoute><Dashboard /></SmartRoute>} />
       <Route path="/calendar" element={<SmartRoute><Calendar /></SmartRoute>} />
       <Route path="/ratings" element={<SmartRoute><Ratings /></SmartRoute>} />
       <Route path="/volunteer/:id" element={<SmartRoute><VolunteerDetail /></SmartRoute>} />
 
-      {/* Coordinator-only */}
       <Route path="/team" element={<CoordinatorRoute><Team /></CoordinatorRoute>} />
       <Route path="/team/:id" element={<CoordinatorRoute><VolunteerDetail /></CoordinatorRoute>} />
       <Route path="/moderation" element={<CoordinatorRoute><ModerationPage /></CoordinatorRoute>} />
 
-      {/* Any authenticated user */}
       <Route path="/my-events" element={<AuthRoute><MyEvents /></AuthRoute>} />
       <Route path="/settings" element={<AuthRoute><SettingsPage /></AuthRoute>} />
 

@@ -16,7 +16,6 @@ export default function PublicNavbar() {
     <nav className="bg-white border-b border-neutral-200/60 sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-14">
-          {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
               <span className="text-black font-extrabold text-sm">V+</span>
@@ -26,7 +25,6 @@ export default function PublicNavbar() {
             </span>
           </Link>
 
-          {/* Nav links */}
           <div className="flex items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -50,11 +48,10 @@ export default function PublicNavbar() {
             })}
           </div>
 
-          {/* Auth buttons */}
           <div className="flex items-center gap-2">
             {token && user ? (
               <Link
-                to={user.role === 'coordinator' ? '/admin' : '/my-events'}
+                to={user.role === 'coordinator' ? '/' : '/my-events'}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-500 text-black rounded-lg text-xs font-bold hover:bg-primary-400 transition-all"
               >
                 <span>{user.full_name || 'Кабинет'}</span>

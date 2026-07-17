@@ -3,19 +3,25 @@ from fastapi import APIRouter, HTTPException, Depends
 from bot.database import (
     get_all_volunteers,
     get_volunteer_submissions,
+    get_volunteer_by_id,
     get_achievements,
     get_all_events,
     toggle_volunteer_status,
     get_volunteer_reviews,
     get_organizer_rating,
 )
-from bot.api.routes.auth import get_current_coordinator
+from bot.api.routes.auth import get_current_coordinator, get_optional_user
 
 router = APIRouter(tags=["volunteers"])
 
+# Fields never returned over the API, regardless of who's asking.
+_ALWAYS_EXCLUDED = {"password_hash"}
+# Fields returned only to an authenticated coordinator.
+_COORDINATOR_ONLY = {"email", "phone", "telegram_id"}
+
 
 @router.get("/volunteers")
-async def list_volunteers():
+async def list_volunteers(coordinator=Depends(get_current_coordinator)):
     volunteers = await get_all_volunteers()
     result = []
     for v in volunteers:
@@ -37,23 +43,20 @@ async def list_volunteers():
 
 
 @router.get("/volunteers/{volunteer_id}")
-async def get_volunteer_detail(volunteer_id: int):
-    volunteers = await get_all_volunteers()
-    vol = None
-    for v in volunteers:
-        if v["id"] == volunteer_id:
-            vol = v
-            break
-
+async def get_volunteer_detail(volunteer_id: int, user=Depends(get_optional_user)):
+    vol = await get_volunteer_by_id(volunteer_id)
     if not vol:
         raise HTTPException(status_code=404, detail="Volunteer not found")
+
+    is_coordinator = bool(user) and user.get("role") == "coordinator"
+    hidden = _ALWAYS_EXCLUDED if is_coordinator else (_ALWAYS_EXCLUDED | _COORDINATOR_ONLY)
+    safe_vol = {k: v for k, v in vol.items() if k not in hidden}
 
     submissions = await get_volunteer_submissions(volunteer_id)
     achievements = await get_achievements(volunteer_id)
     reviews = await get_volunteer_reviews(volunteer_id)
     org_rating = await get_organizer_rating(volunteer_id)
 
-    # Enrich submissions with event titles
     events = await get_all_events()
     event_map = {e["id"]: e["title"] for e in events}
     enriched_submissions = []
@@ -64,7 +67,7 @@ async def get_volunteer_detail(volunteer_id: int):
         })
 
     return {
-        **vol,
+        **safe_vol,
         "submissions": enriched_submissions,
         "achievements": achievements,
         "reviews": reviews,
@@ -82,7 +85,6 @@ async def toggle_status(
     if new_status is None:
         raise HTTPException(status_code=404, detail="Volunteer not found")
 
-    # Fetch updated volunteer info for the response
     volunteers = await get_all_volunteers()
     vol = None
     for v in volunteers:

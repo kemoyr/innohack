@@ -39,7 +39,6 @@ async def upload_verification(
     if event["status"] not in ("pending",):
         raise HTTPException(status_code=400, detail="Мероприятие уже проверено")
 
-    # Save photos to temp files for analysis
     temp_paths = []
     try:
         for photo in photos:
@@ -49,7 +48,6 @@ async def upload_verification(
                 tmp.write(content)
                 temp_paths.append(tmp.name)
 
-        # Run AI moderation
         result = run_moderation(
             photo_paths=temp_paths,
             lat=location_lat if location_lat != 0 else None,
@@ -59,14 +57,12 @@ async def upload_verification(
             demo_mode=settings.DEMO_MODE,
         )
     finally:
-        # Clean up temp files
         for p in temp_paths:
             try:
                 os.unlink(p)
             except OSError:
                 pass
 
-    # Save verification record
     ver_id = await create_event_verification(
         event_id=event_id,
         volunteer_id=user["user_id"],
@@ -78,7 +74,6 @@ async def upload_verification(
         ai_reasons=json.dumps(result["reasons"], ensure_ascii=False),
     )
 
-    # If AI approved, auto-publish the event
     if result["approved"]:
         await moderate_event(event_id, "planned", "Автоматически одобрено ИИ")
 
@@ -122,10 +117,6 @@ async def my_events(user=Depends(get_current_user)):
             "ai_approved": ver["ai_approved"] if ver else None,
         })
     return result
-
-
-# ── Coordinator moderation ───────
-
 
 class ModerationAction(BaseModel):
     action: str  # "approve" or "reject"

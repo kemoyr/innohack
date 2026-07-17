@@ -1,8 +1,3 @@
-# ──────────────────────────────────
-#  All bot text constants (Russian)
-# ──────────────────────────────────
-
-# ── Welcome & Role ────────────────
 WELCOME = (
     "<b>Добро пожаловать в Волонтёр+!</b>\n\n"
     "Это бот для учёта волонтёрской деятельности.\n"
@@ -11,7 +6,6 @@ WELCOME = (
 BTN_ROLE_VOLUNTEER = "Волонтёр"
 BTN_ROLE_COORDINATOR = "Координатор"
 
-# ── Registration ──────────────────
 REG_ASK_NAME = "Введите ваше <b>ФИО</b>:"
 REG_ASK_CITY = "Введите ваш <b>город</b>:"
 REG_ASK_PHONE = "Введите ваш <b>номер телефона</b> (или нажмите «Пропустить»):"
@@ -26,7 +20,6 @@ REG_SUCCESS_COORDINATOR = (
 REG_ASK_PASSWORD = "Введите <b>пароль координатора</b>:"
 REG_WRONG_PASSWORD = "Неверный пароль. Попробуйте ещё раз или нажмите /start."
 
-# ── Volunteer Menu ────────────────
 MENU_VOLUNTEER_HEADER = "<b>Главное меню волонтёра</b>"
 BTN_SUBMIT_REPORT = "📝 Подать отчёт"
 BTN_MY_STATS = "📊 Моя статистика"
@@ -35,7 +28,6 @@ BTN_MY_REPORTS = "📋 Мои отчёты"
 BTN_VOLUNTEERS = "👥 Волонтёры"
 BTN_LEADERBOARD = "🏆 Рейтинг"
 
-# ── Submission Flow ───────────────
 SUB_ASK_LOCATION = (
     "Отправьте вашу <b>геолокацию</b> (нажмите на скрепку → Геопозиция).\n"
     "Или нажмите «Пропустить», если не можете отправить."
@@ -57,7 +49,6 @@ SUB_ASK_QR = (
 )
 SUB_MIN_PHOTOS = "Нужно отправить минимум <b>2 фотографии</b>."
 
-# ── Verification Results ──────────
 VERIFY_EXIF_FAIL = "⚠️ Не удалось извлечь EXIF-данные из фотографий."
 VERIFY_GEO_FAIL = "⚠️ Геолокация не совпадает с местом мероприятия."
 VERIFY_SELFIE_FAIL = "⚠️ Не обнаружено лицо ни на одной фотографии. Нужно хотя бы одно селфи."
@@ -78,10 +69,8 @@ VERIFY_SUBMISSION_REJECTED = (
     "Попробуйте отправить отчёт заново."
 )
 
-# ── Demo mode warnings ────────────
 DEMO_EXIF_WARNING = "ℹ️ DEMO: EXIF-данные отсутствуют (сжатие Telegram). Пропускаем проверку."
 
-# ── Coordinator Menu ──────────────
 MENU_COORDINATOR_HEADER = "<b>Главное меню координатора</b>"
 BTN_TEAM = "👥 Команда"
 BTN_STATS = "📊 Статистика"
@@ -91,7 +80,6 @@ BTN_GENERATE_QR = "🔲 Создать QR"
 BTN_DASHBOARD = "🌐 Открыть дашборд"
 BTN_BACK = "◀️ Назад"
 
-# ── Team ──────────────────────────
 TEAM_HEADER = "<b>👥 Команда волонтёров</b>\n\nВсего: {count}"
 TEAM_VOLUNTEER_ROW = "{i}. {name} — {points} баллов"
 TEAM_VOLUNTEER_DETAIL = (
@@ -105,7 +93,6 @@ TEAM_VOLUNTEER_DETAIL = (
     "Зарегистрирован: {created_at}"
 )
 
-# ── Stats ─────────────────────────
 STATS_HEADER = "<b>📊 Статистика</b>"
 STATS_FORMAT = (
     "Всего мероприятий: <b>{total_events}</b>\n"
@@ -129,7 +116,6 @@ MY_STATS_FORMAT = (
     "  QR-код: {qr_count} из {submissions_count}"
 )
 
-# ── Calendar ──────────────────────
 CALENDAR_HEADER = "<b>📅 Календарь мероприятий</b>"
 CALENDAR_PLANNED = "🔵 {title} — {date}"
 CALENDAR_COMPLETED = "✅ {title} — {date} (участников: {attendance})"
@@ -137,7 +123,6 @@ CALENDAR_EMPTY = "Нет запланированных мероприятий."
 CALENDAR_ASK_ATTENDANCE = "Введите количество участников:"
 CALENDAR_EVENT_COMPLETED = "✅ Мероприятие «{title}» отмечено как завершённое."
 
-# ── QR Generation ─────────────────
 QR_ASK_TITLE = "Введите <b>название мероприятия</b>:"
 QR_ASK_DATE = "Введите <b>дату</b> мероприятия (ДД.ММ.ГГГГ):"
 QR_ASK_LOCATION = "Введите <b>место проведения</b>:"
@@ -149,7 +134,6 @@ QR_GENERATED = (
     "Код: <code>{code}</code>"
 )
 
-# ── Ratings ───────────────────────
 RATINGS_HEADER = "<b>🏆 Рейтинг волонтёров</b>\n"
 RATINGS_PODIUM = "{medal} <b>{name}</b> — {points} баллов"
 RATINGS_ROW = "{i}. {name} — {points} баллов"
@@ -159,13 +143,11 @@ MEDAL_FIRST = "🥇"
 MEDAL_SECOND = "🥈"
 MEDAL_THIRD = "🥉"
 
-# ── Achievements ──────────────────
 ACHIEVEMENT_EARNED = "🏅 <b>Новое достижение!</b>\n\n{title}\n{description}"
 ACHIEVEMENTS_HEADER = "<b>🏅 Ваши достижения</b>\n"
 ACHIEVEMENTS_ROW = "• <b>{title}</b> — {description}\n  📅 Получено: {date}"
 ACHIEVEMENTS_EMPTY = "У вас пока нет достижений. Подавайте отчёты, чтобы получать награды!"
 
-# Achievement definitions
 ACH_FIRST_REPORT_TITLE = "Первый шаг"
 ACH_FIRST_REPORT_DESC = "Подан первый отчёт"
 ACH_FIVE_REPORTS_TITLE = "Активист"
@@ -177,7 +159,6 @@ ACH_100_POINTS_DESC = "Набрано 100 баллов"
 ACH_500_POINTS_TITLE = "Полтысячи"
 ACH_500_POINTS_DESC = "Набрано 500 баллов"
 
-# ── Volunteer Reports ────────────
 MY_REPORTS_HEADER = "<b>📋 Ваши отчёты</b>\n"
 MY_REPORTS_EMPTY = "У вас пока нет отчётов. Нажмите «📝 Подать отчёт», чтобы создать первый!"
 MY_REPORTS_ROW = (
@@ -188,7 +169,6 @@ MY_REPORTS_ROW = (
 )
 MY_REPORTS_TOTAL = "\n<b>Итого отчётов:</b> {count} | <b>Всего баллов:</b> {points}"
 
-# ── Public volunteer list & profile ──
 VOLUNTEERS_HEADER = "<b>👥 Волонтёры</b>\n\nВсего: {count}"
 VOLUNTEERS_ROW = "{i}. {name} — {points} баллов"
 VOLUNTEER_PUBLIC_PROFILE = (
@@ -202,18 +182,15 @@ VOLUNTEER_PUBLIC_PROFILE = (
 )
 VOLUNTEER_NOT_FOUND = "Волонтёр не найден."
 
-# ── Errors ────────────────────────
 ERROR_GENERAL = "Произошла ошибка. Попробуйте позже."
 ERROR_NOT_REGISTERED = "Вы не зарегистрированы. Нажмите /start для начала."
 ERROR_NO_PERMISSION = "У вас нет прав для этого действия."
 
-# ── New Buttons ──────────────────
 BTN_HELP = "Помощь"
 BTN_MY_PROFILE = "Мой профиль"
 BTN_EVENTS = "Мероприятия"
 BTN_OPEN_APP = "Открыть приложение"
 
-# ── Help ─────────────────────────
 HELP_TEXT = (
     "<b>Команды бота:</b>\n\n"
     "/start — Главное меню\n"
@@ -232,7 +209,6 @@ HELP_TEXT = (
     "• Распознавание лица: минимум одно селфи"
 )
 
-# ── Profile ──────────────────────
 PROFILE_FORMAT = (
     "<b>Профиль</b>\n\n"
     "Имя: <b>{name}</b>\n"
@@ -244,11 +220,13 @@ PROFILE_FORMAT = (
     "Достижений: <b>{achievements}</b>"
 )
 
-# ── Events (volunteer view) ─────
 UPCOMING_EVENTS_HEADER = "<b>Предстоящие мероприятия:</b>\n"
 UPCOMING_EVENT_ROW = "• <b>{title}</b>\n  {date} | {location}"
 NO_UPCOMING_EVENTS = "Нет предстоящих мероприятий."
 
-# ── Misc ──────────────────────────
 BTN_SKIP = "Пропустить"
-DASHBOARD_LINK = '🌐 <a href="http://localhost:8000">Открыть дашборд</a>'
+DASHBOARD_LINK_UNAVAILABLE = "Ссылка на дашборд пока не настроена (WEBAPP_URL)."
+
+
+def dashboard_link(url: str) -> str:
+    return f'🌐 <a href="{url}">Открыть дашборд</a>'

@@ -18,7 +18,6 @@ export default function MyEvents() {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', location_name: '', scheduled_date: '' });
 
-  // Verification state
   const [verifying, setVerifying] = useState(null);
   const [verFiles, setVerFiles] = useState([]);
   const [verResult, setVerResult] = useState(null);
@@ -28,7 +27,7 @@ export default function MyEvents() {
     fetchEvents();
   }, []);
 
-  async function fetchEvents() {
+  const fetchEvents = async () => {
     try {
       const data = await api.getMyEvents();
       setEvents(data);
@@ -37,9 +36,9 @@ export default function MyEvents() {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function handleCreate(e) {
+  const handleCreate = async (e) => {
     e.preventDefault();
     setCreating(true);
     try {
@@ -52,16 +51,15 @@ export default function MyEvents() {
     } finally {
       setCreating(false);
     }
-  }
+  };
 
-  async function handleVerify(eventId) {
+  const handleVerify = async (eventId) => {
     if (verFiles.length === 0) return;
     setUploading(true);
     try {
       const fd = new FormData();
       verFiles.forEach((f) => fd.append('photos', f));
 
-      // Try to get geolocation
       let lat = 0, lon = 0;
       try {
         const pos = await new Promise((resolve, reject) => {
@@ -70,7 +68,6 @@ export default function MyEvents() {
         lat = pos.coords.latitude;
         lon = pos.coords.longitude;
       } catch {
-        // Geolocation not available
       }
       fd.append('location_lat', lat);
       fd.append('location_lon', lon);
@@ -83,7 +80,7 @@ export default function MyEvents() {
     } finally {
       setUploading(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -109,7 +106,6 @@ export default function MyEvents() {
         </button>
       </div>
 
-      {/* Events list */}
       {events.length > 0 ? (
         <div className="space-y-3">
           {events.map((ev) => {
@@ -140,7 +136,6 @@ export default function MyEvents() {
                   </span>
                 </div>
 
-                {/* Pending: show verification upload */}
                 {isPending && !isVerifying && (
                   <button
                     onClick={() => { setVerifying(ev.id); setVerFiles([]); setVerResult(null); }}
@@ -151,7 +146,6 @@ export default function MyEvents() {
                   </button>
                 )}
 
-                {/* Verification form */}
                 {isVerifying && !verResult && (
                   <div className="mt-3 p-4 bg-neutral-50 rounded-lg space-y-3">
                     <p className="text-xs font-semibold text-neutral-600">Загрузите фото мероприятия</p>
@@ -185,7 +179,6 @@ export default function MyEvents() {
                   </div>
                 )}
 
-                {/* Verification result */}
                 {isVerifying && verResult && (
                   <div className={`mt-3 p-4 rounded-lg ${verResult.ai_approved ? 'bg-emerald-50' : 'bg-amber-50'}`}>
                     <div className="flex items-center gap-2 mb-2">
@@ -217,7 +210,6 @@ export default function MyEvents() {
                   </div>
                 )}
 
-                {/* Already verified but pending coordinator */}
                 {ev.status === 'pending' && ev.has_verification && !isVerifying && (
                   <div className="mt-3 flex items-center gap-2 text-xs text-amber-600">
                     <Brain size={14} />
@@ -241,7 +233,6 @@ export default function MyEvents() {
         </div>
       )}
 
-      {/* Create modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">

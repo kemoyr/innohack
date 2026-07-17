@@ -97,43 +97,37 @@ async function uploadRequest(method, path, formData) {
 }
 
 const api = {
-  // Auth
   login: ({ email, password }) => publicRequest('POST', '/api/auth/login', { email, password }),
   register: (data) => publicRequest('POST', '/api/auth/register', data),
   getMe: () => request('GET', '/api/auth/me'),
 
-  // Public
   getEvents: () => publicRequest('GET', '/api/events'),
   getStats: () => publicRequest('GET', '/api/stats'),
   getLeaderboard: () => publicRequest('GET', '/api/leaderboard'),
   getAchievements: () => publicRequest('GET', '/api/achievements'),
+  getNominations: () => publicRequest('GET', '/api/stats/nominations'),
   getActivity: () => publicRequest('GET', '/api/activity'),
   getChartData: () => publicRequest('GET', '/api/stats/charts'),
 
-  // Authenticated
   getVolunteers: () => request('GET', '/api/volunteers'),
   getVolunteer: (id) => publicRequest('GET', `/api/volunteers/${id}`),
   createEvent: (data) => request('POST', '/api/events', data),
   updateEvent: (id, data) => request('PATCH', `/api/events/${id}`, data),
   toggleVolunteerStatus: (id) => request('PATCH', `/api/volunteers/${id}/status`),
 
-  // Volunteer events
   getMyEvents: () => request('GET', '/api/events/my/list'),
   uploadVerification: (eventId, formData) => uploadRequest('POST', `/api/events/${eventId}/verify`, formData),
   getVerification: (eventId) => request('GET', `/api/events/${eventId}/verification`),
 
-  // Applications
   applyToEvent: (eventId, data) => request('POST', `/api/events/${eventId}/apply`, data),
   getMyApplications: () => request('GET', '/api/events/my/applications'),
   getMyApplication: (eventId) => request('GET', `/api/events/${eventId}/my-application`),
   getEventApplications: (eventId) => request('GET', `/api/events/${eventId}/applications`),
 
-  // Reviews
   reviewEvent: (eventId, data) => request('POST', `/api/events/${eventId}/review`, data),
   getEventReviews: (eventId) => publicRequest('GET', `/api/events/${eventId}/reviews`),
   getVolunteerReviews: (volunteerId) => publicRequest('GET', `/api/volunteers/${volunteerId}/reviews`),
 
-  // Moderation (coordinator)
   getModerationQueue: () => request('GET', '/api/moderation/queue'),
   getModerationHistory: () => request('GET', '/api/moderation/history'),
   moderateEvent: (eventId, data) => request('POST', `/api/moderation/${eventId}/decide`, data),

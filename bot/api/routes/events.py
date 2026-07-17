@@ -89,7 +89,6 @@ async def create_new_event(
         )
         return {"id": event_id, "qr_code": code, "status": "planned"}
     else:
-        # Volunteer creates pending event
         event_id = await create_event(
             title=event.title,
             description=event.description,

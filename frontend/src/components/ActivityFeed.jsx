@@ -58,7 +58,7 @@ export default function ActivityFeed() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchActivity() {
+    const fetchActivity = async () => {
       try {
         const data = await api.getActivity();
         setActivities(data);
@@ -67,7 +67,7 @@ export default function ActivityFeed() {
       } finally {
         setLoading(false);
       }
-    }
+    };
     fetchActivity();
   }, []);
 

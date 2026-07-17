@@ -131,7 +131,6 @@ export default function EventCard({ event, onApplied }) {
             </div>
           </div>
 
-          {/* Stats row */}
           <div className="flex items-center gap-4 mt-2.5">
             {event.application_count > 0 && (
               <div className="flex items-center gap-1 text-xs text-neutral-500">
@@ -164,7 +163,6 @@ export default function EventCard({ event, onApplied }) {
         </div>
       </div>
 
-      {/* Action buttons */}
       {isLoggedIn && !applied && isPlanned && (
         <div className="mt-3 pt-3 border-t border-neutral-100">
           {!showApply ? (
@@ -234,7 +232,6 @@ export default function EventCard({ event, onApplied }) {
         </div>
       )}
 
-      {/* Review button for completed events */}
       {isLoggedIn && isCompleted && !reviewed && (
         <div className="mt-3 pt-3 border-t border-neutral-100">
           {!showReview ? (

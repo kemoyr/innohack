@@ -45,16 +45,10 @@ router = Router(name="volunteer")
 
 DEMO_MODE = settings.DEMO_MODE
 
-
-# ── FSM States ────────────────────
-
 class SubmissionFlow(StatesGroup):
     waiting_location = State()
     waiting_photos = State()
     waiting_qr = State()
-
-
-# ── Keyboards ─────────────────────
 
 def photos_keyboard(photo_count: int):
     buttons = []
@@ -70,8 +64,6 @@ def skip_keyboard():
     )
 
 
-# ── Help ─────────────────────────
-
 @router.message(Command("help"))
 @router.message(F.text == strings.BTN_HELP)
 async def show_help(message: Message):
@@ -81,8 +73,6 @@ async def show_help(message: Message):
         logger.error("Error showing help: %s", e)
         await message.answer(strings.ERROR_GENERAL)
 
-
-# ── Profile ──────────────────────
 
 @router.message(Command("profile"))
 @router.message(F.text == strings.BTN_MY_PROFILE)
@@ -114,8 +104,6 @@ async def show_profile(message: Message):
         await message.answer(strings.ERROR_GENERAL)
 
 
-# ── Events ───────────────────────
-
 @router.message(Command("events"))
 @router.message(F.text == strings.BTN_EVENTS)
 async def show_events(message: Message):
@@ -136,9 +124,6 @@ async def show_events(message: Message):
         logger.error("Error showing events: %s", e)
         await message.answer(strings.ERROR_GENERAL)
 
-
-# ── Submit Report ─────────────────
-
 @router.message(F.text == strings.BTN_SUBMIT_REPORT)
 async def start_submission(message: Message, state: FSMContext):
     try:
@@ -157,9 +142,6 @@ async def start_submission(message: Message, state: FSMContext):
     except Exception as e:
         logger.error("Error starting submission: %s", e)
         await message.answer(strings.ERROR_GENERAL)
-
-
-# ── Location ──────────────────────
 
 @router.message(SubmissionFlow.waiting_location, F.location)
 async def process_location(message: Message, state: FSMContext):
@@ -185,8 +167,6 @@ async def skip_location(message: Message, state: FSMContext):
         await message.answer(strings.ERROR_GENERAL)
 
 
-# ── Photos ────────────────────────
-
 @router.message(SubmissionFlow.waiting_photos, F.photo)
 async def process_photo(message: Message, state: FSMContext, bot: Bot):
     tmp_path = None
@@ -196,7 +176,6 @@ async def process_photo(message: Message, state: FSMContext, bot: Bot):
         user_lat = data.get("lat")
         user_lon = data.get("lon")
 
-        # Download photo to temp file
         photo = message.photo[-1]  # highest resolution
         file_info = await bot.get_file(photo.file_id)
 
@@ -205,30 +184,26 @@ async def process_photo(message: Message, state: FSMContext, bot: Bot):
 
         await bot.download_file(file_info.file_path, tmp_path)
 
-        # Analyse photo
         exif_data = extract_exif(tmp_path)
         exif_ok = False
         geo_ok = False
         has_face = False
 
-        # EXIF check
         if exif_data["datetime"] and is_recent(exif_data["datetime"]):
             exif_ok = True
         elif DEMO_MODE:
             logger.warning("DEMO: EXIF missing or not recent, skipping strict check")
             exif_ok = True  # lenient in demo mode
 
-        # Geo check
         if exif_data["lat"] and exif_data["lon"] and user_lat and user_lon:
             geo_ok = is_location_match(exif_data["lat"], exif_data["lon"], user_lat, user_lon)
         elif user_lat and user_lon:
-            # No EXIF GPS, but user sent location — accept in demo mode
+            # DEMO: если у фото нет GPS в EXIF, принимаем координаты, отправленные пользователем.
             if DEMO_MODE:
                 geo_ok = True
         elif DEMO_MODE:
             geo_ok = True  # no location at all, lenient in demo
 
-        # Face detection (always run)
         has_face = detect_face(tmp_path)
 
         photo_results.append({
@@ -240,7 +215,6 @@ async def process_photo(message: Message, state: FSMContext, bot: Bot):
 
         num = len(photo_results)
 
-        # Status icons
         exif_icon = "✅" if exif_ok else "❌"
         geo_icon = "✅" if geo_ok else "❌"
         face_icon = "✅" if has_face else "❌"
@@ -282,7 +256,6 @@ async def _finalize_photos(message: Message, state: FSMContext):
     data = await state.get_data()
     photo_results = data.get("photo_results", [])
 
-    # Validate
     if len(photo_results) < 2:
         await message.answer(strings.SUB_MIN_PHOTOS, reply_markup=photos_keyboard(len(photo_results)))
         return
@@ -310,12 +283,8 @@ async def _finalize_photos(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    # Proceed to QR step
     await message.answer(strings.SUB_ASK_QR, reply_markup=skip_keyboard())
     await state.set_state(SubmissionFlow.waiting_qr)
-
-
-# ── QR Code ───────────────────────
 
 @router.message(SubmissionFlow.waiting_qr, F.text == strings.SUB_BTN_SKIP)
 async def skip_qr(message: Message, state: FSMContext):
@@ -394,7 +363,6 @@ async def _complete_submission(message: Message, state: FSMContext, qr_code, eve
     has_any_face = any(p["has_face"] for p in photo_results)
     has_any_geo = any(p["geo_ok"] for p in photo_results)
 
-    # Calculate points
     base_points = 50
     bonus = 0
     if has_any_exif:
@@ -433,7 +401,6 @@ async def _complete_submission(message: Message, state: FSMContext, qr_code, eve
         submission_id=sub_id,
     )
 
-    # Get updated volunteer
     volunteer = await get_volunteer(message.from_user.id)
     total_volunteer_points = volunteer["points"] if volunteer else total_points
 
@@ -446,7 +413,6 @@ async def _complete_submission(message: Message, state: FSMContext, qr_code, eve
         )
     )
 
-    # Check achievements
     await _check_achievements(message, volunteer_id)
 
     await state.clear()
@@ -460,36 +426,23 @@ async def _check_achievements(message: Message, volunteer_id: int):
         existing_types = {a["badge_type"] for a in existing}
 
         submissions = await get_volunteer_submissions(volunteer_id)
-        volunteer = None
-
-        # Fetch volunteer for points
-        from bot.database import get_all_volunteers
-        all_vols = await get_all_volunteers()
-        for v in all_vols:
-            if v["id"] == volunteer_id:
-                volunteer = v
-                break
+        volunteer = await get_volunteer_by_id(volunteer_id)
 
         new_achievements = []
 
-        # First report
         if len(submissions) >= 1 and "first_report" not in existing_types:
             new_achievements.append(("first_report", strings.ACH_FIRST_REPORT_TITLE, strings.ACH_FIRST_REPORT_DESC))
 
-        # 5 reports
         if len(submissions) >= 5 and "five_reports" not in existing_types:
             new_achievements.append(("five_reports", strings.ACH_FIVE_REPORTS_TITLE, strings.ACH_FIVE_REPORTS_DESC))
 
-        # 10 reports
         if len(submissions) >= 10 and "ten_reports" not in existing_types:
             new_achievements.append(("ten_reports", strings.ACH_TEN_REPORTS_TITLE, strings.ACH_TEN_REPORTS_DESC))
 
         if volunteer:
-            # 100 points
             if volunteer["points"] >= 100 and "100_points" not in existing_types:
                 new_achievements.append(("100_points", strings.ACH_100_POINTS_TITLE, strings.ACH_100_POINTS_DESC))
 
-            # 500 points
             if volunteer["points"] >= 500 and "500_points" not in existing_types:
                 new_achievements.append(("500_points", strings.ACH_500_POINTS_TITLE, strings.ACH_500_POINTS_DESC))
 
@@ -504,9 +457,6 @@ async def _check_achievements(message: Message, volunteer_id: int):
 
     except Exception as e:
         logger.error("Error checking achievements: %s", e)
-
-
-# ── My Stats ──────────────────────
 
 @router.message(F.text == strings.BTN_MY_STATS)
 async def my_stats(message: Message):
@@ -524,7 +474,6 @@ async def my_stats(message: Message):
             "—",
         )
 
-        # Count verified checks across all submissions
         exif_count = sum(1 for s in submissions if s.get("exif_verified"))
         geo_count = sum(1 for s in submissions if s.get("geo_verified"))
         selfie_count = sum(1 for s in submissions if s.get("selfie_verified"))
@@ -545,9 +494,6 @@ async def my_stats(message: Message):
     except Exception as e:
         logger.error("Error showing stats: %s", e)
         await message.answer(strings.ERROR_GENERAL)
-
-
-# ── My Achievements ───────────────
 
 @router.message(F.text == strings.BTN_MY_ACHIEVEMENTS)
 async def my_achievements(message: Message):
@@ -573,9 +519,6 @@ async def my_achievements(message: Message):
         logger.error("Error showing achievements: %s", e)
         await message.answer(strings.ERROR_GENERAL)
 
-
-# ── My Reports ───────────────────
-
 @router.message(F.text == strings.BTN_MY_REPORTS)
 async def my_reports(message: Message):
     try:
@@ -591,14 +534,12 @@ async def my_reports(message: Message):
 
         lines = [strings.MY_REPORTS_HEADER]
         for i, sub in enumerate(submissions[:10], 1):
-            # Get event title
             event_title = "Без QR-кода"
             if sub.get("event_id"):
                 event = await get_event_by_id(sub["event_id"])
                 if event:
                     event_title = event["title"]
 
-            # Status text
             status_map = {
                 "verified": "✅ Подтверждён",
                 "pending": "⏳ На проверке",
@@ -606,13 +547,11 @@ async def my_reports(message: Message):
             }
             status_text = status_map.get(sub["status"], sub["status"])
 
-            # Verification icons
             exif_icon = "✅" if sub["exif_verified"] else "❌"
             geo_icon = "✅" if sub["geo_verified"] else "❌"
             selfie_icon = "✅" if sub["selfie_verified"] else "❌"
             qr_icon = "✅" if sub["qr_verified"] else "❌"
 
-            # Date
             date_str = sub["created_at"][:10] if sub.get("created_at") else "—"
 
             lines.append(strings.MY_REPORTS_ROW.format(
@@ -637,15 +576,11 @@ async def my_reports(message: Message):
         logger.error("Error showing reports: %s", e)
         await message.answer(strings.ERROR_GENERAL)
 
-
-# ── Public: Volunteer List ───────
-
 @router.message(F.text == strings.BTN_VOLUNTEERS)
 async def public_volunteer_list(message: Message):
     """Show list of all volunteers — available to everyone."""
     try:
         volunteers = await get_all_volunteers()
-        # Filter to show only volunteers (not coordinators)
         vols = [v for v in volunteers if v["role"] == "volunteer"]
         if not vols:
             await message.answer(strings.VOLUNTEERS_HEADER.format(count=0))
@@ -670,9 +605,6 @@ async def public_volunteer_list(message: Message):
     except Exception as e:
         logger.error("Error showing public volunteer list: %s", e)
         await message.answer(strings.ERROR_GENERAL)
-
-
-# ── Public: Volunteer Profile ────
 
 @router.callback_query(F.data.startswith("pub_vol:"))
 async def public_volunteer_detail(callback: CallbackQuery):
@@ -705,7 +637,6 @@ async def public_volunteer_detail(callback: CallbackQuery):
             status=status_text,
         )
 
-        # Show achievements if any
         if achievements:
             text += "\n\n<b>Достижения:</b>"
             for a in achievements:
@@ -714,9 +645,6 @@ async def public_volunteer_detail(callback: CallbackQuery):
         await callback.message.answer(text)
     except Exception as e:
         logger.error("Error showing public volunteer detail: %s", e)
-
-
-# ── Public: Leaderboard ──────────
 
 @router.message(F.text == strings.BTN_LEADERBOARD)
 async def public_leaderboard(message: Message):
@@ -740,7 +668,6 @@ async def public_leaderboard(message: Message):
                     i=i + 1, name=v["full_name"], points=v["points"]
                 ))
 
-        # Show current user's position if registered
         volunteer = await get_volunteer(message.from_user.id)
         if volunteer and volunteer["role"] == "volunteer":
             all_leaders = await get_leaderboard(100)
@@ -755,9 +682,6 @@ async def public_leaderboard(message: Message):
     except Exception as e:
         logger.error("Error showing public leaderboard: %s", e)
         await message.answer(strings.ERROR_GENERAL)
-
-
-# ── Back ──────────────────────────
 
 @router.message(F.text == strings.BTN_BACK)
 async def go_back(message: Message, state: FSMContext):

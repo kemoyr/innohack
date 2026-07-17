@@ -52,7 +52,6 @@ def analyze_geolocation(lat: float, lon: float) -> dict:
         valid = False
         reasons.append("Координаты вне допустимого диапазона")
 
-    # Check for null island (0,0)
     if abs(lat) < 0.01 and abs(lon) < 0.01:
         valid = False
         reasons.append("Координаты указывают на нулевой остров (0,0)")
@@ -73,7 +72,6 @@ def analyze_text(title: str, description: str = "") -> dict:
         reasons.append("Название слишком длинное")
         score -= 0.2
 
-    # Check for excessive caps
     if title.isupper() and len(title) > 5:
         reasons.append("Название написано КАПСОМ")
         score -= 0.1
@@ -105,7 +103,6 @@ def run_moderation(
     total_score = 0.0
     checks = 0
 
-    # 1. Photo analysis
     photo_scores = []
     has_any_face = False
     for i, path in enumerate(photo_paths):
@@ -143,7 +140,6 @@ def run_moderation(
         reasons.append("Фотографии не загружены")
         details["photos"] = {"count": 0, "avg_score": 0, "has_face": False}
 
-    # 2. Geolocation analysis
     geo = analyze_geolocation(lat, lon)
     if geo["valid"]:
         total_score += 1.0
@@ -152,7 +148,6 @@ def run_moderation(
     checks += 1
     details["geo"] = geo
 
-    # 3. Text analysis
     text = analyze_text(title, description)
     total_score += text["score"]
     checks += 1
@@ -160,7 +155,6 @@ def run_moderation(
         reasons.extend(text["reasons"])
     details["text"] = text
 
-    # Compute final score
     final_score = total_score / max(checks, 1)
 
     # Decision: approve if score >= 0.6 (lenient for demo)

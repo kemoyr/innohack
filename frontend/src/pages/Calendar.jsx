@@ -35,7 +35,7 @@ export default function Calendar() {
   });
 
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
       try {
         const data = await api.getEvents();
         setEvents(data);
@@ -44,7 +44,7 @@ export default function Calendar() {
       } finally {
         setLoading(false);
       }
-    }
+    };
     fetchData();
   }, []);
 
@@ -76,7 +76,6 @@ export default function Calendar() {
 
   const planned = events.filter((e) => e.status === 'planned');
   const completed = events.filter((e) => e.status === 'completed');
-  const cancelled = events.filter((e) => e.status === 'cancelled');
 
   const displayed =
     tab === 'planned' ? planned : tab === 'completed' ? completed : events;
@@ -95,7 +94,6 @@ export default function Calendar() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-neutral-900">Календарь</h1>
@@ -112,7 +110,6 @@ export default function Calendar() {
         </button>
       </div>
 
-      {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-neutral-200/60 p-4 flex items-center gap-4">
           <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
@@ -143,7 +140,6 @@ export default function Calendar() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2">
         {tabs.map((t) => {
           const Icon = t.icon;
@@ -173,7 +169,6 @@ export default function Calendar() {
         })}
       </div>
 
-      {/* Events grouped by month */}
       {grouped.length > 0 ? (
         <div className="space-y-6">
           {grouped.map((group) => (
@@ -199,7 +194,6 @@ export default function Calendar() {
         </div>
       )}
 
-      {/* Create Event Modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">

@@ -17,11 +17,11 @@ const podiumStyles = [
     rankBg: 'bg-neutral-400 text-white',
   },
   {
-    bg: 'bg-gradient-to-r from-accent-50 to-orange-50',
-    border: 'border-accent-400/30',
-    text: 'text-orange-800',
-    badge: 'bg-orange-100 text-orange-700',
-    rankBg: 'bg-accent-500 text-white',
+    bg: 'bg-gradient-to-r from-primary-50 to-primary-100',
+    border: 'border-primary-400/30',
+    text: 'text-primary-900',
+    badge: 'bg-primary-200 text-primary-900',
+    rankBg: 'bg-primary-700 text-white',
   },
 ];
 
@@ -42,7 +42,6 @@ export default function Leaderboard({ data, compact = false }) {
 
   return (
     <div className="space-y-2">
-      {/* Top 3 */}
       {top3.map((person, idx) => {
         const style = podiumStyles[idx];
         return (
@@ -72,7 +71,6 @@ export default function Leaderboard({ data, compact = false }) {
         );
       })}
 
-      {/* Rest */}
       {rest.map((person, idx) => {
         const rank = idx + 4;
         const barWidth = Math.max((person.points / maxPoints) * 100, 8);
