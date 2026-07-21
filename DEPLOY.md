@@ -1,67 +1,73 @@
-# Деплой на Railway
+# Деплой на собственный сервер (auroraclient.fun)
 
-Стек: **Dockerfile** (сборка React + Python), один сервис, порт из переменной **`PORT`** (Railway подставляет сам).
+Стек: bare-metal — nginx (статика + reverse proxy) + systemd-сервис
+(FastAPI/uvicorn на 127.0.0.1:8000, плюс Telegram-бот на long polling в
+том же процессе). Код в `bot/main.py` запускает оба сразу.
 
-## 1. Код в GitHub
+## 1. Первый деплой
 
-Репозиторий должен быть на GitHub (ветка, с которой деплоитесь — обычно `main`).
+```bash
+git clone <URL_РЕПОЗИТОРИЯ> /opt/innohack
+cd /opt/innohack
+cp .env.example .env   # заполнить реальными значениями, см. ниже
+sudo bash deploy/deploy.sh
+```
 
-## 2. Новый проект в Railway
+`deploy/deploy.sh` идемпотентен: создаёт системного пользователя `innohack`
+(если его ещё нет), ставит Python-зависимости в venv, собирает фронтенд,
+устанавливает nginx vhost (`deploy/nginx-auroraclient.conf`) и systemd-юнит
+(`deploy/volunteerplus.service`), затем (пере)запускает всё.
 
-1. Откройте [railway.app](https://railway.app) → войдите через GitHub.
-2. **New project** → **Deploy from GitHub repo**.
-3. Выберите репозиторий `beeline-2026-new` (или ваш форк).
-4. Railway подхватит **`railway.json`** и соберёт образ по **Dockerfile** (это может занять несколько минут).
+## 2. Переменные окружения (`.env` в корне проекта)
 
-## 3. Переменные окружения (Variables)
+| Переменная       | Обязательно | Комментарий |
+|------------------|-------------|-------------|
+| `SECRET_KEY`     | да          | Длинная случайная строка (подпись JWT). |
+| `ADMIN_PASSWORD` | да*         | Пароль координатора при регистрации через Telegram-бота. |
+| `BOT_TOKEN`      | нет         | Токен @BotFather. Если пусто — бот отключается, работает только веб. |
+| `DB_PATH`        | да (прод)   | `/opt/innohack/data/volunteer.db`. |
+| `DEMO_MODE`      | опционально | `true` / `false`. |
+| `WEBAPP_URL`     | опционально | `https://auroraclient.fun` — для кнопки «Открыть приложение» в боте. |
 
-В сервисе: **Variables** → **Add variable**.
+`PORT` не задавать — сервис всегда слушает `8000` (см. systemd-юнит и nginx `proxy_pass`).
 
-| Переменная        | Обязательно | Пример / комментарий |
-|-------------------|------------|----------------------|
-| `SECRET_KEY`      | да         | Длинная случайная строка (JWT). |
-| `ADMIN_PASSWORD`  | да*        | Пароль координатора в боте (если используете бота). |
-| `BOT_TOKEN`       | нет        | Токен @BotFather; для **только веб** можно пусто или заглушка. |
-| `DB_PATH`         | да (прод)  | **`/data/volunteer.db`** — вместе с томом ниже. |
-| `DEMO_MODE`       | опционально| `true` / `false`. |
-| `WEBAPP_URL`      | опционально| Публичный URL после шага 5, например `https://xxx.up.railway.app`. |
+## 3. SSL (Let's Encrypt)
 
-`PORT` **не задавайте вручную** — его выставляет Railway.
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d auroraclient.fun -d www.auroraclient.fun
+```
 
-## 4. Персистентный диск (обязательно для SQLite)
+Сертификат обновляется автоматически через systemd-таймер `certbot.timer`.
 
-Иначе база будет обнуляться при каждом деплое/рестарте.
+## 4. Проверка
 
-1. Откройте **сервис** (не корень проекта, если сервисов несколько).
-2. Вкладка **Volumes** (или **Settings → Volume** в зависимости от UI).
-3. **Add volume** → mount path: **`/data`**.
-4. Перезапустите деплой, если сервис уже был запущен без тома.
+- Сайт: `https://auroraclient.fun/`
+- API: `https://auroraclient.fun/api/stats`
+- Swagger: `https://auroraclient.fun/docs`
+- Логи бота/API: `journalctl -u volunteerplus.service -f`
 
-## 5. Публичный URL
+## 5. Обновление после изменений в репозитории
 
-1. **Settings** → **Networking** → **Generate domain** (или привязка своего домена).
-2. Скопируйте URL и при желании добавьте переменную **`WEBAPP_URL`** с этим значением.
+```bash
+cd /opt/innohack && git pull
+sudo bash deploy/deploy.sh
+```
 
-Проверка:
+## 6. Откат
 
-- Сайт: `https://<ваш-домен>/`
-- API: `https://<ваш-домен>/api/stats`
-- Swagger: `https://<ваш-домен>/docs`
+```bash
+sudo bash deploy/rollback.sh
+```
 
-Healthcheck в `railway.json` бьёт в **`/api/stats`**.
-
-## 6. Первый вход (демо)
-
-Если база пустая, при старте подставляются демо-данные из `init_db()`:
-
-- Email: **`coordinator@example.com`**
-- Пароль: **`demo123`**
+Останавливает сервис и восстанавливает предыдущий nginx-vhost (если он был
+перезаписан деплоем). Файлы приложения и база данных не удаляются.
 
 ## Типичные проблемы
 
 | Симптом | Что сделать |
 |--------|-------------|
-| Build failed | **Deployments** → открыть лог сборки; часто нехватка памяти на бесплатном плане — повторить деплой или апгрейд. |
-| Crash / не слушает порт | Убедиться, что приложение использует **`PORT`** из окружения (в этом репозитории уже так в `bot/main.py`). |
-| Пустая БД после рестарта | Не смонтирован том **`/data`** или неверный **`DB_PATH`**. |
-| 404 на `/ratings` и т.п. | Должен отдаваться собранный фронт из `frontend/dist` в образе; при локальной правке фронта нужен новый push и redeploy. |
+| 502 Bad Gateway | `systemctl status volunteerplus.service` — сервис не запущен или упал (смотреть `journalctl -u volunteerplus`). |
+| Бот не отвечает | Проверить `BOT_TOKEN` в `.env` и что в логах нет ошибки авторизации от Telegram API. |
+| Пустая БД после рестарта | Не тот `DB_PATH`, либо `/opt/innohack/data` удалили при обновлении. |
+| 404 на `/ratings` и т.п. | Фронтенд не собран — `frontend/dist` отсутствует; перезапустить `deploy/deploy.sh`. |
