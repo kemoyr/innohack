@@ -28,6 +28,7 @@ sudo bash deploy/deploy.sh
 | `DB_PATH`        | да (прод)   | `/opt/innohack/data/volunteer.db`. |
 | `DEMO_MODE`      | опционально | `true` / `false`. |
 | `WEBAPP_URL`     | опционально | `https://auroraclient.fun` — для кнопки «Открыть приложение» в боте. |
+| `HOST`           | да (прод)   | `127.0.0.1` — иначе порт 8000 слушает на всех интерфейсах и доступен напрямую, в обход nginx/TLS. |
 
 `PORT` не задавать — сервис всегда слушает `8000` (см. systemd-юнит и nginx `proxy_pass`).
 

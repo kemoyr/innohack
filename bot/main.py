@@ -34,9 +34,10 @@ async def run_bot(bot: Bot):
 
 async def run_api(bot: Bot | None):
     app = create_app(bot)
+    host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8000"))
-    logger.info("Starting site on 0.0.0.0:%s (API + статика)", port)
-    config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
+    logger.info("Starting site on %s:%s (API + статика)", host, port)
+    config = uvicorn.Config(app, host=host, port=port, log_level="info")
     server = uvicorn.Server(config)
     await server.serve()
 
