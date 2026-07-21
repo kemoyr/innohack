@@ -153,11 +153,12 @@ async def init_db():
             )
         except Exception:
             pass
-        # Auto-seed demo data if DB is empty
-        cursor = await db.execute("SELECT COUNT(*) FROM volunteers")
-        count = (await cursor.fetchone())[0]
-        if count == 0:
-            await _seed_demo_data(db)
+        # Auto-seed demo data if DB is empty and DEMO_MODE is enabled
+        if settings.DEMO_MODE:
+            cursor = await db.execute("SELECT COUNT(*) FROM volunteers")
+            count = (await cursor.fetchone())[0]
+            if count == 0:
+                await _seed_demo_data(db)
 
         await db.commit()
 
